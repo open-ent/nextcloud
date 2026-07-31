@@ -1,0 +1,184 @@
+name: Build & Publish Fat Mod
+
+# Module DUAL (AngularJS + React) type edifice-cli.
+# Reproduit build.sh en CI (Angular via docker run, React via pnpm, injection
+# des deux fronts dans le backend), puis publie le fat-mod sur GitHub Packages
+# + rct-nexus au push d'un tag. Calque sur les modules form / magneto.
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - dev
+      - "*-patched"
+      - "*-patched-dev"
+    tags: ["*"]
+  pull_request:
+    branches: [main, master, dev]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build-publish:
+    name: Build & Publish Fat Mod (dual Angular + React)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: "8"
+          distribution: temurin
+          cache: maven
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      # --- Front React (frontend/, pnpm / Vite) ---
+      - name: Build React frontend
+        working-directory: frontend
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.OPENENT_PACKAGES_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          HUSKY: 0
+        run: |
+          pnpm install --no-frozen-lockfile
+          pnpm build
+
+      # --- Front AngularJS legacy (angularjs/, yarn + gulp via image docker figée) ---
+      - name: Build AngularJS frontend
+        working-directory: angularjs
+        run: |
+          docker run --rm \
+            -v "$PWD:/home/node/app" \
+            -w /home/node/app --user root \
+            opendigitaleducation/node:22-alpine-pnpm \
+            sh -c '
+              export COREPACK_ENABLE_STRICT=0
+              /usr/local/bin/yarn install --ignore-engines --network-timeout 600000
+              node_modules/gulp/bin/gulp.js build
+            '
+
+      # --- Injection des deux fronts dans le backend (miroir de build.sh) ---
+      - name: Inject fronts into backend resources
+        run: |
+          set -eu
+          RES=backend/src/main/resources
+          rm -rf "$RES/public" "$RES/view"
+          # React : tout le dist à la racine des resources
+          cp -R frontend/dist/* "$RES/"
+          mkdir -p "$RES/view" "$RES/public/template" "$RES/public/img" "$RES/public/js"
+          # les .html du dist React vont dans view/
+          mv "$RES"/*.html "$RES/view/" 2>/dev/null || true
+          # AngularJS : view / dist(js) / template
+          [ -d angularjs/src/view ]     && cp -R angularjs/src/view/*     "$RES/view/"             || true
+          [ -d angularjs/src/dist ]     && cp -R angularjs/src/dist/*     "$RES/public/js/"        || true
+          [ -d angularjs/src/template ] && cp -R angularjs/src/template/* "$RES/public/template/"  || true
+
+      # --- Maven : accès GitHub Packages (dépendance entcore-v2) ---
+      - name: Configure Maven pour GitHub Packages
+        run: |
+          mkdir -p ~/.m2
+          cat > ~/.m2/settings.xml << 'EOF'
+          <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                    xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
+                                        https://maven.apache.org/xsd/settings-1.0.0.xsd">
+            <servers>
+              <server>
+                <id>github</id>
+                <username>${env.GITHUB_ACTOR}</username>
+                <password>${env.GITHUB_TOKEN}</password>
+              </server>
+            </servers>
+            <profiles>
+              <profile>
+                <id>github-packages</id>
+                <repositories>
+                  <repository>
+                    <id>github</id>
+                    <name>GitHub open-ent Packages</name>
+                    <url>https://maven.pkg.github.com/open-ent/entcore-v2</url>
+                    <releases><enabled>true</enabled></releases>
+                    <snapshots><enabled>true</enabled></snapshots>
+                  </repository>
+                </repositories>
+              </profile>
+            </profiles>
+            <activeProfiles>
+              <activeProfile>github-packages</activeProfile>
+            </activeProfiles>
+          </settings>
+          EOF
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+
+      - name: Build fat JAR
+        working-directory: backend
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+        run: mvn clean package -DskipTests -B -DbuildNumber=${GITHUB_SHA::8} -DscmBranch=${GITHUB_REF_NAME}
+
+      - name: Run tests
+        if: github.event_name == 'pull_request'
+        working-directory: backend
+        run: mvn test -B
+
+      # --- Publication du fat-mod (au tag uniquement) ---
+      - name: Publish fat JAR to GitHub Packages
+        continue-on-error: true
+        if: startsWith(github.ref, 'refs/tags/')
+        working-directory: backend
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+        run: |
+          FAT_JAR=$(ls target/*-fat.jar 2>/dev/null | head -1)
+          if [ -z "${FAT_JAR}" ]; then echo "::error::Fat JAR introuvable"; ls -la target/*.jar || true; exit 1; fi
+          BASE=$(basename "${FAT_JAR}" -fat.jar)
+          GROUP_ID=${BASE%%~*}; REST=${BASE#*~}; ARTIFACT_ID=${REST%%~*}; VERSION=${REST#*~}
+          echo "Publishing ${GROUP_ID}:${ARTIFACT_ID}:${VERSION}:fat"
+          mvn deploy:deploy-file \
+            -Dfile="${FAT_JAR}" -DgroupId="${GROUP_ID}" -DartifactId="${ARTIFACT_ID}" \
+            -Dversion="${VERSION}" -Dclassifier=fat -Dpackaging=jar \
+            -DrepositoryId=github -Durl="https://maven.pkg.github.com/${{ github.repository }}" -B
+
+      - name: Publish fat JAR to rct-nexus
+        continue-on-error: true
+        if: startsWith(github.ref, 'refs/tags/')
+        working-directory: backend
+        env:
+          NEXUS_USER: ${{ secrets.NEXUS_USER }}
+          NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+        run: |
+          cat > /tmp/nx-settings.xml <<EOF
+          <settings><servers><server><id>pt-releases</id><username>${NEXUS_USER}</username><password>${NEXUS_PASSWORD}</password></server></servers></settings>
+          EOF
+          FAT_JAR=$(ls target/*-fat.jar 2>/dev/null | head -1)
+          if [ -z "${FAT_JAR}" ]; then echo "::error::Fat JAR introuvable"; exit 1; fi
+          FAT_ABS=$(realpath "${FAT_JAR}")
+          BASE=$(basename "${FAT_JAR}" -fat.jar)
+          GROUP_ID=${BASE%%~*}; REST=${BASE#*~}; ARTIFACT_ID=${REST%%~*}; VERSION=${REST#*~}
+          echo "Deploying ${GROUP_ID}:${ARTIFACT_ID}:${VERSION}:fat -> rct-nexus"
+          ( cd /tmp && mvn deploy:deploy-file -s /tmp/nx-settings.xml -Dfile="${FAT_ABS}" \
+              -DgroupId="${GROUP_ID}" -DartifactId="${ARTIFACT_ID}" -Dversion="${VERSION}" \
+              -Dclassifier=fat -Dpackaging=jar -DrepositoryId=pt-releases \
+              -Durl="https://rct-nexus.tech.fr/repository/maven-releases/" -B )
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: backend/target/*-fat.jar
+          generate_release_notes: true
