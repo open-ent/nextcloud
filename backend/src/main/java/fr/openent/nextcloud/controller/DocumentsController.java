@@ -66,6 +66,23 @@ public class DocumentsController extends ControllerHelper {
                         .onFailure(err -> renderError(request)));
     }
 
+    @Get("/files/user/:userid/edit")
+    @ApiDoc("API to get an online office-editing URL (Collabora/OnlyOffice) for a file, brokered with the per-user token")
+    @SecuredAction(value = "", type = ActionType.RESOURCE)
+    @ResourceFilter(OwnerFilter.class)
+    public void getEditUrl(HttpServerRequest request) {
+        final String path = request.getParam(Field.PATH);
+        if (StringUtils.isEmpty(path)) {
+            badRequest(request, "nextcloud.edit.path.missing");
+            return;
+        }
+        UserUtils.getUserInfos(eb, request, user ->
+                userService.getUserSession(user.getUserId())
+                        .compose(userSession -> documentsService.getEditUrl(Renders.getHost(request), userSession, path))
+                        .onSuccess(res -> renderJson(request, res))
+                        .onFailure(err -> renderError(request)));
+    }
+
     @Get("/files/user/:userid/file/:fileName/download")
     @ApiDoc("API to get or download file")
     @SecuredAction(value = "", type = ActionType.RESOURCE)

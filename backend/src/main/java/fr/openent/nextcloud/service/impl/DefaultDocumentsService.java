@@ -76,6 +76,44 @@ public class DefaultDocumentsService implements DocumentsService {
         return promise.future();
     }
 
+    /**
+     * Récupère une URL d'édition en ligne (OnlyOffice) pour un fichier.
+     * S'appuie sur l'API « Direct Editing » du cœur de NextCloud
+     * ({@code POST /ocs/v2.php/apps/files/api/v1/directEditing/open}, editorId {@code onlyoffice}),
+     * authentifiée avec le token per-user du connecteur — donc sans session NextCloud côté
+     * utilisateur. L'URL renvoyée ouvre l'éditeur en s'appuyant sur le token, aucune connexion demandée.
+     */
+    @Override
+    public Future<JsonObject> getEditUrl(String host, UserNextcloud.TokenProvider userSession, String path) {
+        Promise<JsonObject> promise = Promise.promise();
+        final NextcloudConfig nextcloudConfig = this.nextcloudConfigMapByHost.get(host);
+        final JsonObject body = new JsonObject()
+                .put("path", path.startsWith("/") ? path : "/" + path)
+                .put("editorId", "onlyoffice");
+        this.client.postAbs(nextcloudConfig.host() + "/ocs/v2.php/apps/files/api/v1/directEditing/open?format=json")
+                .basicAuthentication(userSession.userId(), userSession.token())
+                .putHeader("OCS-APIRequest", "true")
+                .as(BodyCodec.jsonObject())
+                .sendJsonObject(body, responseAsync -> {
+                    if (responseAsync.failed()) {
+                        log.error("[Nextcloud@DefaultDocumentsService::getEditUrl] Failed to open direct editing session: ", responseAsync.cause());
+                        promise.fail(responseAsync.cause().getMessage());
+                        return;
+                    }
+                    final JsonObject data = responseAsync.result().body()
+                            .getJsonObject("ocs", new JsonObject())
+                            .getJsonObject(Field.DATA, new JsonObject());
+                    final String url = data.getString("url");
+                    if (url == null || url.isEmpty()) {
+                        log.error("[Nextcloud@DefaultDocumentsService::getEditUrl] No edit url returned: " + responseAsync.result().body());
+                        promise.fail("nextcloud.edit.url.unavailable");
+                    } else {
+                        promise.complete(new JsonObject().put("url", url));
+                    }
+                });
+        return promise.future();
+    }
+
     @Override
     public void parameterizedListFiles(String host, UserNextcloud.TokenProvider userSession, String path, Handler<AsyncResult<HttpResponse<String>>> handler) {
         final NextcloudConfig nextcloudConfig = this.nextcloudConfigMapByHost.get(host);

@@ -68,7 +68,15 @@ export class ToolbarSnipletViewModel implements IViewModel {
 
     toggleEdit(): void {
         if (this.vm.selectedDocuments.length > 0) {
-            nextcloudService.openNextcloudLink(this.vm.selectedDocuments[0], this.vm.nextcloudUrl);
+            const document: SyncDocument = this.vm.selectedDocuments[0];
+            // Édition bureautique en ligne : le connecteur fabrique une URL d'édition à token
+            // (OnlyOffice via l'API Direct Editing du cœur) avec le token per-user — pas de connexion NextCloud.
+            nextcloudService.getEditUrl(model.me.userId, document.path)
+                .then((url: string) => window.open(url))
+                .catch((err: AxiosError) => {
+                    toasts.warning('nextcloud.edit.error');
+                    console.error('[Nextcloud@ToolbarSnipletViewModel::toggleEdit] Failed to open online editor: ', err);
+                });
         }
     }
 

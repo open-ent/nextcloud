@@ -1,5 +1,5 @@
 import { AxiosError, AxiosResponse } from "axios";
-import { angular, Behaviours, idiom as lang, Me, model, template, workspace } from "entcore";
+import { angular, Behaviours, idiom as lang, Me, model, template, toasts, workspace } from "entcore";
 import { Subscription } from "rxjs";
 import { RootsConst } from "../../core/constants/roots.const";
 import { ViewMode } from "../../core/enums/view-mode";
@@ -333,7 +333,14 @@ class ViewModel implements IViewModel {
             this.selectedDocuments = [];
         } else {
             if (document.editable) {
-                nextcloudService.openNextcloudLink(document, this.nextcloudUrl);
+                // Fichier bureautique/PDF : ouvrir l'éditeur en ligne (OnlyOffice via l'API Direct Editing
+                // du cœur) via une URL à token fabriquée par le connecteur avec le token per-user — sans login.
+                nextcloudService.getEditUrl(model.me.userId, document.path)
+                    .then((url: string) => window.open(url))
+                    .catch((err: AxiosError) => {
+                        toasts.warning('nextcloud.edit.error');
+                        console.error('[Nextcloud@onOpenContent] Failed to open online editor: ', err);
+                    });
             } else {
                 window.open(this.getFile(document));
             }

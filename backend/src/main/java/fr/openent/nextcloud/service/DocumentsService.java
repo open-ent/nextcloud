@@ -28,6 +28,18 @@ public interface DocumentsService {
     Future<JsonArray> listFiles(String host, UserNextcloud.TokenProvider userSession, String path);
 
     /**
+     * Récupère une URL d'édition bureautique en ligne (OnlyOffice) pour un fichier, via l'API
+     * « Direct Editing » du cœur de NextCloud. L'appel est authentifié avec le token per-user
+     * que le connecteur détient déjà (aucune session NextCloud n'est demandée à l'utilisateur).
+     *
+     * @param host        host
+     * @param userSession session utilisateur {@link UserNextcloud.TokenProvider}
+     * @param path        chemin NextCloud du fichier à éditer (relatif à la racine de l'utilisateur)
+     * @return Future contenant {@code {"url": "..."}} vers l'éditeur en ligne
+     */
+    Future<JsonObject> getEditUrl(String host, UserNextcloud.TokenProvider userSession, String path);
+
+    /**
      * Call the list API with specified handler
      *
      * @param host host

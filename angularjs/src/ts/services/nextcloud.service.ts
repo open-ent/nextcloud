@@ -18,6 +18,9 @@ export interface INextcloudService {
     getFile(userid: string, fileName: string, path: string, contentType: string, isFolder?: boolean): string;
     getFiles(userid: string, path: string, files: Array<string>): string;
     createFolder(userid: string, folderPath: String): Promise<AxiosResponse>;
+    // Édition bureautique en ligne (OnlyOffice) : renvoie une URL d'édition à token,
+    // fabriquée côté connecteur avec le token per-user (aucune connexion NextCloud demandée).
+    getEditUrl(userid: string, path: string): Promise<string>;
 }
 
 export const nextcloudService: INextcloudService = {
@@ -33,6 +36,10 @@ export const nextcloudService: INextcloudService = {
 
     getIsNextcloudUrlHidden: async (): Promise<boolean> => {
         return http.get(`/nextcloud/config/isNextcloudUrlHidden`).then((res: AxiosResponse) => res.data.isNextcloudUrlHidden);
+    },
+
+    getEditUrl: async (userid: string, path: string): Promise<string> => {
+        return http.get(`/nextcloud/files/user/${userid}/edit?path=${encodeURIComponent(path)}`).then((res: AxiosResponse) => res.data.url);
     },
 
     createFolder: async(userid: string, folderPath: String): Promise<AxiosResponse> => {

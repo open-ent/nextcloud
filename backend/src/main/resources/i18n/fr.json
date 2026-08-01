@@ -2,6 +2,7 @@
   "nextcloud.title": "Nextcloud",
   "nextcloud.virtual.media.title": "Documents synchronisés",
   "nextcloud.documents": "Documents synchronisés",
+  "nextcloud.edit.error": "Impossible d'ouvrir l'éditeur en ligne pour ce document.",
   "create.nextcloud.documents": "Créer un dossier synchronisé",
   "nextcloud.quota": "Espace utilisé synchronisé",
   "nextcloud.file.already.exist": "Impossible de renommer le fichier avec ce nom: celui-ci existe déjà",
