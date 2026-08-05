@@ -39,7 +39,13 @@ export const nextcloudService: INextcloudService = {
     },
 
     getEditUrl: async (userid: string, path: string): Promise<string> => {
-        return http.get(`/nextcloud/files/user/${userid}/edit?path=${encodeURIComponent(path)}`).then((res: AxiosResponse) => res.data.url);
+        // document.path provient du backend déjà percent-encodé (segments d'URL WebDAV bruts,
+        // ex. "/Nextcloud%20Manual.pdf") : un simple encodeURIComponent() double l'encodage
+        // (%20 -> %2520) et fait échouer la résolution du fichier côté NextCloud (500). On
+        // normalise via decodeURIComponent() avant de ré-encoder pour garantir un seul niveau
+        // d'encodage, que path soit déjà encodé ou non.
+        const normalizedPath = decodeURIComponent(path);
+        return http.get(`/nextcloud/files/user/${userid}/edit?path=${encodeURIComponent(normalizedPath)}`).then((res: AxiosResponse) => res.data.url);
     },
 
     createFolder: async(userid: string, folderPath: String): Promise<AxiosResponse> => {
