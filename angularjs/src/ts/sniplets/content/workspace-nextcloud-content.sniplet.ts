@@ -378,6 +378,9 @@ export const workspaceNextcloudContent = {
     controller: {
         init: async function (): Promise<void> {
             lang.addBundle('/nextcloud/i18n', () => {
+                // exposé sur le scope (comme les contrôleurs core auth) pour permettre
+                // [[lang.translate('...')]] dans les templates imbriqués, ex. un placeholder traduit
+                this.lang = lang;
                 this.vm = new ViewModel(this, nextcloudService);
                 this.vm.toolbar = new ToolbarSnipletViewModel(this);
                 this.vm.upload = new UploadFileSnipletViewModel(this);

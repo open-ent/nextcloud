@@ -34,5 +34,17 @@
   "nextcloud.console.save": "Enregistrer",
   "nextcloud.console.cancel": "Annuler",
   "nextcloud.console.add": "ajout",
-  "nextcloud.console.alert.save": "Les paramètres ont bien été sauvegardés."
+  "nextcloud.console.alert.save": "Les paramètres ont bien été sauvegardés.",
+
+  "nextcloud.share.native.button": "Share on NextCloud",
+  "nextcloud.share.native.title": "Share with a user",
+  "nextcloud.share.native.search.placeholder": "Search for a person...",
+  "nextcloud.share.native.empty": "No user found",
+  "nextcloud.share.native.selected": "Recipient:",
+  "nextcloud.share.native.change": "Change",
+  "nextcloud.share.native.confirm": "Share",
+  "nextcloud.share.native.cancel": "Cancel",
+  "nextcloud.share.native.success": "The document was shared successfully.",
+  "nextcloud.share.native.error": "An error occurred while sharing the document.",
+  "nextcloud.share.native.search.error": "An error occurred while searching for users."
 }

@@ -33,7 +33,7 @@
                 </button>
             </div>
 
-            <!-- share document(s) -->
+            <!-- share document(s) (copy to workspace + entcore share-panel) -->
             <div id="nextcloud-toolbar-share">
                 <button ng-click="vm.toolbar.share.toggleShareView(true, vm.selectedDocuments)">
                     <i18n>workspace.share</i18n>
@@ -41,6 +41,16 @@
 
                 <!-- popup -->
                 <div ng-include="'/nextcloud/public/template/behaviours/sniplet-nextcloud-content/toolbar/share/workspace-nextcloud-toolbar-share.html'"></div>
+            </div>
+
+            <!-- share document(s) natively on NextCloud with another ENT user -->
+            <div id="nextcloud-toolbar-share-nextcloud">
+                <button ng-click="vm.toolbar.shareNextcloud.toggleShareNextcloudView(true, vm.selectedDocuments)">
+                    <i18n>nextcloud.share.native.button</i18n>
+                </button>
+
+                <!-- popup -->
+                <div ng-include="'/nextcloud/public/template/behaviours/sniplet-nextcloud-content/toolbar/share-nextcloud/workspace-nextcloud-toolbar-share-nextcloud.html'"></div>
             </div>
         </div>
     </div>
