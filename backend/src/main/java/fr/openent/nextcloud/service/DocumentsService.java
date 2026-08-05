@@ -61,6 +61,19 @@ public interface DocumentsService {
     Future<HttpResponse<Buffer>> getFile(String host, UserNextcloud.TokenProvider userSession, String path);
 
     /**
+     * Récupère la vignette/aperçu d'un fichier (image, pdf, vidéo…) généré par NextCloud,
+     * via l'API cœur {@code /index.php/core/preview}, authentifiée avec le token per-user.
+     *
+     * @param host        host
+     * @param userSession User Session {@link UserNextcloud.TokenProvider}
+     * @param fileId      identifiant NextCloud du fichier (oc:fileid)
+     * @param width       largeur souhaitée de la vignette
+     * @param height      hauteur souhaitée de la vignette
+     * @return  Future containing Buffer of the preview image {@link Buffer}
+     */
+    Future<HttpResponse<Buffer>> getPreview(String host, UserNextcloud.TokenProvider userSession, Number fileId, int width, int height);
+
+    /**
      * get/download folder
      *
      * @param host host

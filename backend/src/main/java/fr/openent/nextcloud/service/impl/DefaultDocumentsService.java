@@ -229,6 +229,19 @@ public class DefaultDocumentsService implements DocumentsService {
         return promise.future();
     }
 
+    @Override
+    public Future<HttpResponse<Buffer>> getPreview(String host, UserNextcloud.TokenProvider userSession, Number fileId, int width, int height) {
+        Promise<HttpResponse<Buffer>> promise = Promise.promise();
+        final NextcloudConfig nextcloudConfig = this.nextcloudConfigMapByHost.get(host);
+        this.client.getAbs(nextcloudConfig.host() + "/index.php/core/preview")
+                .addQueryParam("fileId", String.valueOf(fileId))
+                .addQueryParam("x", String.valueOf(width))
+                .addQueryParam("y", String.valueOf(height))
+                .basicAuthentication(userSession.userId(), userSession.token())
+                .send(responseAsync -> proceedGetDocument(responseAsync, promise));
+        return promise.future();
+    }
+
     /**
      * Proceed async event after HTTP get (get/downloading) file API endpoint has been sent
      *

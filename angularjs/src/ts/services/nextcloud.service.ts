@@ -17,6 +17,8 @@ export interface INextcloudService {
     deleteTrash(userid: string): Promise<AxiosResponse>;
     getFile(userid: string, fileName: string, path: string, contentType: string, isFolder?: boolean): string;
     getFiles(userid: string, path: string, files: Array<string>): string;
+    // Vignette/aperçu d'un fichier (image, pdf, vidéo…) — Content-Disposition: inline, adapté à un <img src>.
+    getPreviewUrl(userid: string, fileId: number, width?: number, height?: number): string;
     createFolder(userid: string, folderPath: String): Promise<AxiosResponse>;
     // Édition bureautique en ligne (OnlyOffice) : renvoie une URL d'édition à token,
     // fabriquée côté connecteur avec le token per-user (aucune connexion NextCloud demandée).
@@ -119,6 +121,12 @@ export const nextcloudService: INextcloudService = {
         const isFolderParam: string = pathParam ? `&isFolder=${isFolder}` : `?isFolder=${isFolder}`;
         const urlParam: string = `${pathParam}${contentTypeParam}${isFolderParam}`;
         return `/nextcloud/files/user/${userid}/file/${encodeURI(fileName)}/download${urlParam}`;
+    },
+
+    // Vignette/aperçu (image, pdf, vidéo…) généré par NextCloud, servi en Content-Disposition: inline
+    // (contrairement à getFile ci-dessus qui force "attachment" — impropre à un <img src>).
+    getPreviewUrl: (userid: string, fileId: number, width: number = 150, height: number = 150): string => {
+        return `/nextcloud/files/user/${userid}/file/${fileId}/preview?width=${width}&height=${height}`;
     },
 
     getFiles: (userid: string, path: string, files: Array<string>): string => {

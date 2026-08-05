@@ -31,6 +31,8 @@ interface IViewModel {
 
     getFile(document: SyncDocument): string;
 
+    getPreviewUrl(document: SyncDocument): string;
+
     nextcloudUrl: string;
     isNextcloudUrlHidden: boolean;
     draggable: Draggable;
@@ -350,6 +352,10 @@ class ViewModel implements IViewModel {
 
     getFile(document: SyncDocument): string {
         return this.nextcloudService.getFile(model.me.userId, document.name, document.path, document.contentType);
+    }
+
+    getPreviewUrl(document: SyncDocument): string {
+        return this.nextcloudService.getPreviewUrl(model.me.userId, document.fileId);
     }
 
     isDropzoneEnabled(): boolean {
