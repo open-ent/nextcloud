@@ -74,6 +74,21 @@ public interface DocumentsService {
     Future<HttpResponse<Buffer>> getPreview(String host, UserNextcloud.TokenProvider userSession, Number fileId, int width, int height);
 
     /**
+     * Partage un fichier/dossier NextCloud avec un autre utilisateur ENT (partage NextCloud natif :
+     * le fichier reste chez son propriétaire, le destinataire y accède via son propre compte NextCloud).
+     * Une fois le fichier partagé, les deux utilisateurs peuvent l'ouvrir en édition (getEditUrl) et
+     * co-éditer en temps réel via OnlyOffice (coproduction native, aucun développement supplémentaire).
+     *
+     * @param host           host
+     * @param userSession    session du propriétaire (celui qui partage) {@link UserNextcloud.TokenProvider}
+     * @param path           chemin NextCloud du fichier/dossier à partager
+     * @param targetUserId   identifiant ENT (= identifiant NextCloud) du destinataire du partage
+     * @param permissions    permissions NextCloud du partage (1=lecture, 3=lecture+écriture, 31=tous droits)
+     * @return Future contenant la réponse OCS Share de NextCloud
+     */
+    Future<JsonObject> shareWithUser(String host, UserNextcloud.TokenProvider userSession, String path, String targetUserId, int permissions);
+
+    /**
      * get/download folder
      *
      * @param host host

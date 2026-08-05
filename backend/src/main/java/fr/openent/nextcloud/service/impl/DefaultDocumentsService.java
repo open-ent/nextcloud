@@ -230,6 +230,38 @@ public class DefaultDocumentsService implements DocumentsService {
     }
 
     @Override
+    public Future<JsonObject> shareWithUser(String host, UserNextcloud.TokenProvider userSession, String path, String targetUserId, int permissions) {
+        Promise<JsonObject> promise = Promise.promise();
+        final NextcloudConfig nextcloudConfig = this.nextcloudConfigMapByHost.get(host);
+        final JsonObject body = new JsonObject()
+                .put("path", path.startsWith("/") ? path : "/" + path)
+                .put("shareType", 0) // 0 = partage vers un utilisateur (par opposition à un groupe/lien public)
+                .put("shareWith", targetUserId)
+                .put("permissions", permissions);
+        this.client.postAbs(nextcloudConfig.host() + "/ocs/v2.php/apps/files_sharing/api/v1/shares?format=json")
+                .basicAuthentication(userSession.userId(), userSession.token())
+                .putHeader("OCS-APIRequest", "true")
+                .as(BodyCodec.jsonObject())
+                .sendJsonObject(body, responseAsync -> {
+                    if (responseAsync.failed()) {
+                        log.error("[Nextcloud@DefaultDocumentsService::shareWithUser] Failed to create share: ", responseAsync.cause());
+                        promise.fail(responseAsync.cause().getMessage());
+                        return;
+                    }
+                    final JsonObject ocs = responseAsync.result().body().getJsonObject("ocs", new JsonObject());
+                    final int statusCode = ocs.getJsonObject("meta", new JsonObject()).getInteger("statuscode", 0);
+                    if (statusCode != 200) {
+                        String message = ocs.getJsonObject("meta", new JsonObject()).getString("message", "unknown error");
+                        log.error("[Nextcloud@DefaultDocumentsService::shareWithUser] NextCloud refused the share : " + message);
+                        promise.fail(message);
+                    } else {
+                        promise.complete(ocs.getJsonObject(Field.DATA, new JsonObject()));
+                    }
+                });
+        return promise.future();
+    }
+
+    @Override
     public Future<HttpResponse<Buffer>> getPreview(String host, UserNextcloud.TokenProvider userSession, Number fileId, int width, int height) {
         Promise<HttpResponse<Buffer>> promise = Promise.promise();
         final NextcloudConfig nextcloudConfig = this.nextcloudConfigMapByHost.get(host);

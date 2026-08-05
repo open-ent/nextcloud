@@ -23,6 +23,10 @@ export interface INextcloudService {
     // Édition bureautique en ligne (OnlyOffice) : renvoie une URL d'édition à token,
     // fabriquée côté connecteur avec le token per-user (aucune connexion NextCloud demandée).
     getEditUrl(userid: string, path: string): Promise<string>;
+    // Partage NextCloud natif avec un autre utilisateur ENT : le fichier reste chez son propriétaire,
+    // le destinataire y accède via son propre compte NextCloud. Une fois partagé, les deux utilisateurs
+    // peuvent co-éditer le même fichier en temps réel via OnlyOffice (getEditUrl côté connecteur).
+    shareWithUser(userid: string, path: string, targetUserId: string, targetDisplayName: string, permissions?: number): Promise<AxiosResponse>;
 }
 
 export const nextcloudService: INextcloudService = {
@@ -48,6 +52,16 @@ export const nextcloudService: INextcloudService = {
         // d'encodage, que path soit déjà encodé ou non.
         const normalizedPath = decodeURIComponent(path);
         return http.get(`/nextcloud/files/user/${userid}/edit?path=${encodeURIComponent(normalizedPath)}`).then((res: AxiosResponse) => res.data.url);
+    },
+
+    shareWithUser: async (userid: string, path: string, targetUserId: string, targetDisplayName: string, permissions: number = 3): Promise<AxiosResponse> => {
+        const normalizedPath = decodeURIComponent(path);
+        return http.post(`/nextcloud/files/user/${userid}/share`, {
+            path: normalizedPath,
+            targetUserId,
+            targetDisplayName,
+            permissions,
+        });
     },
 
     createFolder: async(userid: string, folderPath: String): Promise<AxiosResponse> => {

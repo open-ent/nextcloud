@@ -5,6 +5,7 @@ import fr.openent.nextcloud.core.constants.Field;
 import fr.openent.nextcloud.helper.Attachment;
 import fr.openent.nextcloud.helper.Metadata;
 import fr.openent.nextcloud.helper.StringHelper;
+import fr.openent.nextcloud.model.UserNextcloud;
 import fr.openent.nextcloud.security.OwnerFilter;
 import fr.openent.nextcloud.service.DocumentsService;
 import fr.openent.nextcloud.service.ServiceFactory;
@@ -13,6 +14,7 @@ import fr.wseduc.rs.*;
 import fr.wseduc.security.ActionType;
 import fr.wseduc.security.SecuredAction;
 import fr.wseduc.webutils.http.Renders;
+import fr.wseduc.webutils.request.RequestUtils;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.http.HttpServerRequest;
@@ -146,6 +148,36 @@ public class DocumentsController extends ControllerHelper {
         } catch (NumberFormatException e) {
             return defaultValue;
         }
+    }
+
+    @Post("/files/user/:userid/share")
+    @ApiDoc("API to share a NextCloud file/folder with another ENT user (native NextCloud sharing, enabling " +
+            "real-time coproduction via OnlyOffice once both users open it)")
+    @SecuredAction(value = "", type = ActionType.RESOURCE)
+    @ResourceFilter(OwnerFilter.class)
+    public void shareWithUser(HttpServerRequest request) {
+        RequestUtils.bodyToJson(request, body -> {
+            String path = body.getString(Field.PATH);
+            String targetUserId = body.getString(Field.TARGETUSERID);
+            String targetDisplayName = body.getString(Field.TARGETDISPLAYNAME);
+            int permissions = body.getInteger(Field.PERMISSIONS, 3); // défaut : lecture + écriture
+            if (StringUtils.isEmpty(path) || StringUtils.isEmpty(targetUserId) || StringUtils.isEmpty(targetDisplayName)) {
+                badRequest(request, "nextcloud.share.parameters.missing");
+                return;
+            }
+            UserUtils.getUserInfos(eb, request, user -> {
+                UserNextcloud.RequestBody targetUserBody = new UserNextcloud.RequestBody()
+                        .setUserId(targetUserId)
+                        .setDisplayName(targetDisplayName);
+                // S'assure que le destinataire a bien un compte NextCloud (NextCloud refuse un partage
+                // vers un compte inexistant) avant de créer le partage avec le token du propriétaire.
+                userService.provideUserSession(Renders.getHost(request), targetUserBody)
+                        .compose(v -> userService.getUserSession(user.getUserId()))
+                        .compose(userSession -> documentsService.shareWithUser(Renders.getHost(request), userSession, path, targetUserId, permissions))
+                        .onSuccess(res -> renderJson(request, res))
+                        .onFailure(err -> renderError(request, new JsonObject().put(Field.ERROR, err.getMessage())));
+            });
+        });
     }
 
     @Get("/files/user/:userid/multiple/download")

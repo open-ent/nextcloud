@@ -141,6 +141,8 @@ public class Field {
     public static final String HASPREVIEW = "hasPreview";
     public static final String WIDTH = "width";
     public static final String HEIGHT = "height";
+    public static final String TARGETUSERID = "targetUserId";
+    public static final String TARGETDISPLAYNAME = "targetDisplayName";
     public static final String FAVORITE = "favorite";
     public static final String COMMENTSUNREAD = "commentsUnread";
     public static final String OWNERDISPLAYNAME = "ownerDisplayName";
