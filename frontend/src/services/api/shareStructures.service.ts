@@ -10,11 +10,24 @@ export interface ShareStructureRule {
   targetStructureUai?: string;
 }
 
+export interface StructureOption {
+  id: string;
+  name: string;
+  UAI: string;
+}
+
 export const shareStructuresApi = emptySplitApi.injectEndpoints({
   endpoints: (builder) => ({
     getShareStructures: builder.query<ShareStructureRule[], void>({
       query: () => `/admin/share-structures`,
       providesTags: ["shareStructures"],
+    }),
+    getMyStructure: builder.query<StructureOption[], void>({
+      query: () => `/admin/share-structures/my-structure`,
+    }),
+    searchStructures: builder.query<StructureOption[], string>({
+      query: (query: string) =>
+        `/admin/share-structures/search-structures?query=${encodeURIComponent(query)}`,
     }),
     resolveStructureByUai: builder.query<
       { id: string; name: string; UAI: string },
@@ -24,7 +37,7 @@ export const shareStructuresApi = emptySplitApi.injectEndpoints({
     }),
     addShareStructure: builder.mutation<
       unknown,
-      { targetUai: string }
+      { targetStructureId: string }
     >({
       query: (body) => ({
         url: `/admin/share-structures`,
@@ -48,6 +61,8 @@ export const shareStructuresApi = emptySplitApi.injectEndpoints({
 
 export const {
   useGetShareStructuresQuery,
+  useGetMyStructureQuery,
+  useLazySearchStructuresQuery,
   useLazyResolveStructureByUaiQuery,
   useAddShareStructureMutation,
   useDeleteShareStructureMutation,

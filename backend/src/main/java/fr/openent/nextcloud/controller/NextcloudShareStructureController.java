@@ -107,6 +107,57 @@ public class NextcloudShareStructureController extends ControllerHelper {
         }));
     }
 
+    @Get("/admin/share-structures/my-structure")
+    @ApiDoc("Renvoie l'établissement de l'utilisateur connecté (pour affichage dans le formulaire d'autorisation)")
+    @ResourceFilter(AdminShareStructures.class)
+    @SecuredAction(value = "", type = ActionType.RESOURCE)
+    public void getMyStructure(HttpServerRequest request) {
+        UserUtils.getUserInfos(eb, request, user -> {
+            List<String> myStructures = user.getStructures();
+            if (user.isADMC() || myStructures == null || myStructures.isEmpty()) {
+                Renders.renderJson(request, new JsonArray());
+                return;
+            }
+
+            String cypher = "MATCH (s:Structure) WHERE s.id IN {ids} RETURN s.id as id, s.name as name, s.UAI as UAI";
+            JsonObject params = new JsonObject().put("ids", new JsonArray(new ArrayList<>(myStructures)));
+            serviceFactory.neo4j().execute(cypher, params, Neo4jResult.validResultHandler(event -> {
+                if (event.isLeft()) {
+                    Renders.renderError(request, new JsonObject().put(Field.ERROR, "Failed to resolve your structure"));
+                    return;
+                }
+                Renders.renderJson(request, event.right().getValue());
+            }));
+        });
+    }
+
+    @Get("/admin/share-structures/search-structures")
+    @ApiDoc("Recherche un établissement par nom ou code UAI, pour le choix de la structure à autoriser")
+    @ResourceFilter(AdminShareStructures.class)
+    @SecuredAction(value = "", type = ActionType.RESOURCE)
+    public void searchStructures(HttpServerRequest request) {
+        String rawQuery = request.getParam(Field.QUERY);
+        if (StringUtils.isEmpty(rawQuery) || rawQuery.trim().length() < 2) {
+            Renders.renderJson(request, new JsonArray());
+            return;
+        }
+
+        String cypher =
+                "MATCH (s:Structure) " +
+                        "WHERE toLower(s.name) CONTAINS toLower({search}) OR toLower(s.UAI) CONTAINS toLower({search}) " +
+                        "RETURN s.id as id, s.name as name, s.UAI as UAI " +
+                        "ORDER BY s.name " +
+                        "LIMIT 20";
+        JsonObject params = new JsonObject().put("search", rawQuery.trim());
+        serviceFactory.neo4j().execute(cypher, params, Neo4jResult.validResultHandler(event -> {
+            if (event.isLeft()) {
+                Renders.renderError(request, new JsonObject().put(Field.ERROR, "Failed to search structures"));
+                return;
+            }
+            Renders.renderJson(request, event.right().getValue());
+        }));
+    }
+
     @Get("/admin/share-structures/resolve")
     @ApiDoc("Résout une structure cible à partir de son code UAI")
     @ResourceFilter(AdminShareStructures.class)

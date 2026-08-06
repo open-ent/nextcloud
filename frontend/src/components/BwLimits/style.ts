@@ -31,3 +31,9 @@ export const customColumnBoxStyle = {
   display: "flex",
   flexDirection: "column",
 };
+
+export const instructionsStyle = {
+  fontStyle: "italic",
+  display: "block",
+  margin: "0 2rem 1rem",
+};

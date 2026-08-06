@@ -6,6 +6,7 @@ export interface GlobalProviderContextType {
   inputExtension: string;
   disabledSave: boolean;
   showSuccessAlert: boolean;
+  saveError: string | null;
   setShowSuccessAlert: (value: boolean) => void;
   setInputExtension: (extension: string) => void;
   handleSubmitNewConfig: () => void;

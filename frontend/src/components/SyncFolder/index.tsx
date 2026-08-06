@@ -49,6 +49,9 @@ export const SyncFolder: FC = () => {
         <Typography variant="body2" sx={syncFolderInstructionsStyle}>
           {t("nextcloud.console.folder.location.instructions")}
         </Typography>
+        <Typography variant="body2" sx={syncFolderInstructionsStyle}>
+          {t("nextcloud.console.folder.os.note")}
+        </Typography>
       </Box>
     </Box>
   );

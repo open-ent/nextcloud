@@ -47,6 +47,7 @@ export const GlobalProvider: FC<GlobalProviderProps> = ({ children }) => {
   const [inputExtension, setInputExtension] = useState<string>("");
   const [disabledSave, setDisabledSave] = useState<boolean>(true);
   const [showSuccessAlert, setShowSuccessAlert] = useState<boolean>(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     if (data) {
@@ -56,14 +57,15 @@ export const GlobalProvider: FC<GlobalProviderProps> = ({ children }) => {
   }, [data]);
 
   useEffect(() => {
-    if (
-      JSON.stringify(inputValues) === JSON.stringify(desktopConfigValues) ||
-      !inputValues.syncFolder
-    ) {
-      setDisabledSave(true);
-    } else {
-      setDisabledSave(false);
-    }
+    // Le backend exige TOUJOURS un objet complet et valide (dossier renseigné, bande
+    // passante > 0 dans les deux sens) : sans ce contrôle, "Enregistrer" pouvait s'activer
+    // sur une combinaison que le serveur refusait ensuite silencieusement (cf. handleSubmitNewConfig).
+    const isValid =
+      !!inputValues.syncFolder &&
+      inputValues.uploadLimit > 0 &&
+      inputValues.downloadLimit > 0;
+    const unchanged = JSON.stringify(inputValues) === JSON.stringify(desktopConfigValues);
+    setDisabledSave(unchanged || !isValid);
   }, [inputValues, desktopConfigValues]);
 
   const showSuccessAlertTimeout = () => {
@@ -73,10 +75,21 @@ export const GlobalProvider: FC<GlobalProviderProps> = ({ children }) => {
     }, 5000);
   };
 
-  const handleSubmitNewConfig = () => {
-    updateDesktopConfig(inputValues);
-    setInputExtension("");
-    showSuccessAlertTimeout();
+  const handleSubmitNewConfig = async () => {
+    setSaveError(null);
+    try {
+      // .unwrap() : sans lui, une erreur (ex. bande passante à 0, invalide côté backend)
+      // était silencieusement ignorée et le message de succès s'affichait quand même.
+      await updateDesktopConfig(inputValues).unwrap();
+      setInputExtension("");
+      showSuccessAlertTimeout();
+    } catch (err: any) {
+      setSaveError(
+        err?.data?.error === "Invalid configuration"
+          ? "Configuration invalide : la bande passante (émission/réception) doit être supérieure à 0."
+          : "Une erreur est survenue, les paramètres n'ont pas été enregistrés.",
+      );
+    }
   };
 
   const handleCancelNewConfig = () => {
@@ -154,6 +167,7 @@ export const GlobalProvider: FC<GlobalProviderProps> = ({ children }) => {
       setInputExtension,
       disabledSave,
       showSuccessAlert,
+      saveError,
       setShowSuccessAlert,
       handleSubmitNewConfig,
       handleCancelNewConfig,
@@ -170,6 +184,7 @@ export const GlobalProvider: FC<GlobalProviderProps> = ({ children }) => {
       inputExtension,
       disabledSave,
       showSuccessAlert,
+      saveError,
     ],
   );
 

@@ -48,7 +48,7 @@ public class NextcloudDesktopController extends ControllerHelper {
             }
 
             JsonObject config = event.right().getValue();
-            if (config == null) {
+            if (config == null || config.isEmpty()) {
                 Renders.renderJson(request, new JsonObject().put("error", "Configuration not found"), 404);
                 return;
             }

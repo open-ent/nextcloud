@@ -8,6 +8,7 @@ import {
   inputsContentStyle,
   inputStyle,
   inputTitleStyle,
+  instructionsStyle,
 } from "./style";
 import { useGlobalProvider } from "~/providers/GlobalProvider";
 import { flexStartBoxStyle } from "~/styles/boxStyles";
@@ -24,6 +25,9 @@ export const BwLimits: FC = () => {
     <Box>
       <Typography variant="h2" sx={flexStartBoxStyle}>
         {t("nextcloud.console.bandwidth")}
+      </Typography>
+      <Typography variant="body2" sx={instructionsStyle}>
+        {t("nextcloud.console.bandwidth.instructions")}
       </Typography>
       <Box sx={inputsContentStyle}>
         <Box sx={customColumnBoxStyle}>

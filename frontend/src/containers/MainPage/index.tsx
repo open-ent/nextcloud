@@ -23,6 +23,8 @@ export const MainPage: FC = () => {
     handleCancelNewConfig,
     disabledSave,
     showSuccessAlert,
+    saveError,
+    inputValues,
   } = useGlobalProvider();
   return (
     <Box>
@@ -51,6 +53,18 @@ export const MainPage: FC = () => {
           <ExcludedExtensions />
           <ShareStructures />
         </Box>
+        {(!inputValues.syncFolder ||
+          inputValues.uploadLimit <= 0 ||
+          inputValues.downloadLimit <= 0) && (
+          <Alert severity="warning" sx={{ mb: 1 }}>
+            {t("nextcloud.console.save.requires.folder")}
+          </Alert>
+        )}
+        {saveError && (
+          <Alert severity="error" sx={{ mb: 1 }}>
+            {saveError}
+          </Alert>
+        )}
         <Box sx={{ ...flexEndBoxStyle, gap: "2rem" }}>
           <Button variant="outlined" onClick={handleCancelNewConfig}>
             {t("nextcloud.console.cancel")}

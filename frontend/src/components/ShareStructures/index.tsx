@@ -1,7 +1,15 @@
 import { FC, useState } from "react";
 
 import CloseIcon from "@mui/icons-material/Close";
-import { Box, Button, IconButton, TextField, Typography } from "@mui/material";
+import {
+  Autocomplete,
+  Box,
+  Button,
+  CircularProgress,
+  IconButton,
+  TextField,
+  Typography,
+} from "@mui/material";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -15,30 +23,50 @@ import {
 } from "./style";
 import {
   ShareStructureRule,
+  StructureOption,
   useAddShareStructureMutation,
   useDeleteShareStructureMutation,
+  useGetMyStructureQuery,
   useGetShareStructuresQuery,
+  useLazySearchStructuresQuery,
 } from "~/services/api/shareStructures.service";
 import { flexStartBoxStyle } from "~/styles/boxStyles";
+
+const SEARCH_MIN_LENGTH = 2;
+const SEARCH_DEBOUNCE_MS = 300;
 
 // Réglage propre au connecteur NextCloud (indépendant du modèle de communication générique
 // entcore) : liste des paires d'établissements autorisés à apparaître dans le picker de partage.
 export const ShareStructures: FC = () => {
   const { t } = useTranslation("nextcloud");
   const { data: rules = [] } = useGetShareStructuresQuery();
+  const { data: myStructures = [] } = useGetMyStructureQuery();
+  const [searchStructures, { data: options = [], isFetching: searching }] =
+    useLazySearchStructuresQuery();
   const [addShareStructure, { isLoading: isAdding }] =
     useAddShareStructureMutation();
   const [deleteShareStructure] = useDeleteShareStructureMutation();
 
-  const [uai, setUai] = useState("");
+  const [selectedStructure, setSelectedStructure] =
+    useState<StructureOption | null>(null);
+  const [inputValue, setInputValue] = useState("");
   const [error, setError] = useState("");
+  let searchTimeout: ReturnType<typeof setTimeout>;
+
+  const handleInputChange = (value: string) => {
+    setInputValue(value);
+    clearTimeout(searchTimeout);
+    if (value.trim().length < SEARCH_MIN_LENGTH) return;
+    searchTimeout = setTimeout(() => searchStructures(value.trim()), SEARCH_DEBOUNCE_MS);
+  };
 
   const handleAdd = async () => {
-    if (!uai.trim()) return;
+    if (!selectedStructure) return;
     setError("");
     try {
-      await addShareStructure({ targetUai: uai.trim() }).unwrap();
-      setUai("");
+      await addShareStructure({ targetStructureId: selectedStructure.id }).unwrap();
+      setSelectedStructure(null);
+      setInputValue("");
     } catch (err: any) {
       setError(
         err?.data?.error || t("nextcloud.console.share.structures.error"),
@@ -47,6 +75,14 @@ export const ShareStructures: FC = () => {
   };
 
   const handleDelete = async (rule: ShareStructureRule) => {
+    const label =
+      `${rule.structureName ?? rule.structureId} ↔ ${rule.targetStructureName ?? rule.targetStructureId}`;
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm(t("nextcloud.console.share.structures.delete.confirm", { label }))
+    ) {
+      return;
+    }
     await deleteShareStructure({
       structureId: rule.structureId,
       targetStructureId: rule.targetStructureId,
@@ -62,20 +98,56 @@ export const ShareStructures: FC = () => {
         <Typography variant="body2" sx={infoStyle}>
           {t("nextcloud.console.share.structures.subtitle")}
         </Typography>
+        <Typography variant="body2" sx={infoStyle}>
+          {t("nextcloud.console.share.structures.explanation")}
+        </Typography>
+        {myStructures.length > 0 && (
+          <Typography variant="body2">
+            {t("nextcloud.console.share.structures.my.structure")}{" "}
+            <strong>
+              {myStructures[0].name} ({myStructures[0].UAI})
+            </strong>
+          </Typography>
+        )}
 
         <Box sx={shareStructuresInputRowStyle}>
-          <TextField
-            variant="outlined"
-            value={uai}
-            onChange={(e) => setUai(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+          <Autocomplete
             sx={uaiInputStyle}
-            placeholder={t("nextcloud.console.share.structures.uai.placeholder")}
+            options={options}
+            filterOptions={(x) => x}
+            loading={searching}
+            value={selectedStructure}
+            inputValue={inputValue}
+            onInputChange={(_, value) => handleInputChange(value)}
+            onChange={(_, value) => setSelectedStructure(value)}
+            getOptionLabel={(opt) => `${opt.name} (${opt.UAI})`}
+            isOptionEqualToValue={(opt, val) => opt.id === val.id}
+            noOptionsText={
+              inputValue.trim().length < SEARCH_MIN_LENGTH
+                ? t("nextcloud.console.share.structures.search.hint")
+                : t("nextcloud.console.share.structures.search.empty")
+            }
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                variant="outlined"
+                placeholder={t("nextcloud.console.share.structures.uai.placeholder")}
+                InputProps={{
+                  ...params.InputProps,
+                  endAdornment: (
+                    <>
+                      {searching ? <CircularProgress size={16} /> : null}
+                      {params.InputProps.endAdornment}
+                    </>
+                  ),
+                }}
+              />
+            )}
           />
           <Button
             variant="outlined"
             onClick={handleAdd}
-            disabled={isAdding || !uai.trim()}
+            disabled={isAdding || !selectedStructure}
           >
             {t("nextcloud.console.share.structures.add")}
           </Button>
