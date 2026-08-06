@@ -5,6 +5,7 @@ import fr.openent.nextcloud.controller.DocumentsController;
 import fr.openent.nextcloud.controller.NextcloudController;
 import fr.openent.nextcloud.controller.UserController;
 import fr.openent.nextcloud.controller.NextcloudDesktopController;
+import fr.openent.nextcloud.controller.NextcloudShareStructureController;
 import fr.openent.nextcloud.service.ServiceFactory;
 import fr.wseduc.mongodb.MongoDb;
 import io.vertx.core.Future;
@@ -59,6 +60,7 @@ public class Nextcloud extends BaseServer {
         addController(new UserController(serviceFactory));
         addController(new DocumentsController(serviceFactory));
         addController(new NextcloudDesktopController(serviceFactory));
+        addController(new NextcloudShareStructureController(serviceFactory));
         return Future.succeededFuture();
       });
 	}

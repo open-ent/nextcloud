@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { alertStyle, consoleContentStyle, consoleTitleStyle } from "./style";
 import { BwLimits } from "~/components/BwLimits";
 import { ExcludedExtensions } from "~/components/ExcludedExtensions";
+import { ShareStructures } from "~/components/ShareStructures";
 import { NextcloudConsoleIcon } from "~/components/SVG/NextcloudConsoleIcon";
 import { SyncFolder } from "~/components/SyncFolder";
 import { useGlobalProvider } from "~/providers/GlobalProvider";
@@ -48,6 +49,7 @@ export const MainPage: FC = () => {
           <SyncFolder />
           <BwLimits />
           <ExcludedExtensions />
+          <ShareStructures />
         </Box>
         <Box sx={{ ...flexEndBoxStyle, gap: "2rem" }}>
           <Button variant="outlined" onClick={handleCancelNewConfig}>

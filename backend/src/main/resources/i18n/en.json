@@ -46,5 +46,16 @@
   "nextcloud.share.native.cancel": "Cancel",
   "nextcloud.share.native.success": "The document was shared successfully.",
   "nextcloud.share.native.error": "An error occurred while sharing the document.",
-  "nextcloud.share.native.search.error": "An error occurred while searching for users."
+  "nextcloud.share.native.search.error": "An error occurred while searching for users.",
+
+  "nextcloud.console.share.structures.title": "Cross-establishment sharing",
+  "nextcloud.console.share.structures.subtitle": "Allow users from another establishment to appear in NextCloud sharing.",
+  "nextcloud.console.share.structures.uai.placeholder": "Establishment UAI code",
+  "nextcloud.console.share.structures.add": "Allow",
+  "nextcloud.console.share.structures.resolve.error": "No establishment found for this UAI code.",
+  "nextcloud.console.share.structures.already.exists": "This rule already exists.",
+  "nextcloud.console.share.structures.added": "Rule added.",
+  "nextcloud.console.share.structures.removed": "Rule removed.",
+  "nextcloud.console.share.structures.empty": "No cross-establishment rule.",
+  "nextcloud.console.share.structures.error": "An error occurred."
 }

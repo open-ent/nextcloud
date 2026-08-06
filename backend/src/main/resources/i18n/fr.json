@@ -47,5 +47,16 @@
   "nextcloud.share.native.cancel": "Annuler",
   "nextcloud.share.native.success": "Le document a été partagé avec succès.",
   "nextcloud.share.native.error": "Une erreur est survenue lors du partage du document.",
-  "nextcloud.share.native.search.error": "Une erreur est survenue lors de la recherche d'utilisateurs."
+  "nextcloud.share.native.search.error": "Une erreur est survenue lors de la recherche d'utilisateurs.",
+
+  "nextcloud.console.share.structures.title": "Partage inter-établissements",
+  "nextcloud.console.share.structures.subtitle": "Autoriser les utilisateurs d'un autre établissement à apparaître dans le partage NextCloud.",
+  "nextcloud.console.share.structures.uai.placeholder": "Code UAI de l'établissement",
+  "nextcloud.console.share.structures.add": "Autoriser",
+  "nextcloud.console.share.structures.resolve.error": "Aucun établissement trouvé pour ce code UAI.",
+  "nextcloud.console.share.structures.already.exists": "Cette autorisation existe déjà.",
+  "nextcloud.console.share.structures.added": "Autorisation ajoutée.",
+  "nextcloud.console.share.structures.removed": "Autorisation retirée.",
+  "nextcloud.console.share.structures.empty": "Aucune autorisation inter-établissements.",
+  "nextcloud.console.share.structures.error": "Une erreur est survenue."
 }

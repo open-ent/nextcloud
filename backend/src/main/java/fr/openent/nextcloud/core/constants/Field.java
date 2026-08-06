@@ -160,6 +160,17 @@ public class Field {
     public static final String EXCLUDEDEXTENSIONS = "excludedExtensions";
     public static final String STAT_COLLECTION = "nextcloud_stat";
 
+    // partage inter-établissements (structures autorisées)
+    public static final String SHARE_STRUCTURES_COLLECTION = "nextcloud_share_structures";
+    public static final String STRUCTUREID = "structureId";
+    public static final String TARGETSTRUCTUREID = "targetStructureId";
+    public static final String CREATEDBY = "createdBy";
+    public static final String CREATED = "created";
+    public static final String QUERY = "query";
+    public static final String PROFILE = "profile";
+    public static final String UAI = "UAI";
+    public static final String TARGETUAI = "targetUai";
+
     private Field() {
         throw new IllegalStateException("Utility class");
     }
