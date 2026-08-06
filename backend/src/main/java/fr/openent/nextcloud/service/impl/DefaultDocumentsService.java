@@ -77,19 +77,21 @@ public class DefaultDocumentsService implements DocumentsService {
     }
 
     /**
-     * Récupère une URL d'édition en ligne (OnlyOffice) pour un fichier.
+     * Récupère une URL d'édition en ligne pour un fichier.
      * S'appuie sur l'API « Direct Editing » du cœur de NextCloud
-     * ({@code POST /ocs/v2.php/apps/files/api/v1/directEditing/open}, editorId {@code onlyoffice}),
-     * authentifiée avec le token per-user du connecteur — donc sans session NextCloud côté
-     * utilisateur. L'URL renvoyée ouvre l'éditeur en s'appuyant sur le token, aucune connexion demandée.
+     * ({@code POST /ocs/v2.php/apps/files/api/v1/directEditing/open}), authentifiée avec le token
+     * per-user du connecteur — donc sans session NextCloud côté utilisateur. L'URL renvoyée ouvre
+     * l'éditeur en s'appuyant sur le token, aucune connexion demandée.
+     * Pas de {@code editorId} imposé : NextCloud choisit automatiquement l'éditeur enregistré pour
+     * le type du fichier (Collabora ou OnlyOffice) — le choix se fait côté admin NextCloud
+     * (Applications), pas dans ce connecteur.
      */
     @Override
     public Future<JsonObject> getEditUrl(String host, UserNextcloud.TokenProvider userSession, String path) {
         Promise<JsonObject> promise = Promise.promise();
         final NextcloudConfig nextcloudConfig = this.nextcloudConfigMapByHost.get(host);
         final JsonObject body = new JsonObject()
-                .put("path", path.startsWith("/") ? path : "/" + path)
-                .put("editorId", "onlyoffice");
+                .put("path", path.startsWith("/") ? path : "/" + path);
         this.client.postAbs(nextcloudConfig.host() + "/ocs/v2.php/apps/files/api/v1/directEditing/open?format=json")
                 .basicAuthentication(userSession.userId(), userSession.token())
                 .putHeader("OCS-APIRequest", "true")

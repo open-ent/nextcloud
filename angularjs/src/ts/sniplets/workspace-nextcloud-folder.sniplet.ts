@@ -82,6 +82,8 @@ class ViewModel implements IViewModel {
                 this.documents = [new SyncDocument().initParent()];
                 this.initTree(this.documents);
                 this.initDraggable();
+                // Déplié par défaut : même appel que switchWorkspaceTreeHandler au changement d'onglet.
+                this.folderTree.openFolder(this.documents[0]);
                 safeApply(this.scope);
             })
             .catch((err: AxiosError) => {
