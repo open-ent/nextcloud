@@ -15,7 +15,7 @@ export interface INextcloudService {
     copyDocumentToWorkspace(userid: string, paths: Array<string>, parentId?: string): Promise<Array<models.Element>>;
     deleteDocuments(userid: string, path: Array<string>): Promise<AxiosResponse>;
     deleteTrash(userid: string): Promise<AxiosResponse>;
-    getFile(userid: string, fileName: string, path: string, contentType: string, isFolder?: boolean): string;
+    getFile(userid: string, fileName: string, path: string, contentType: string, isFolder?: boolean, inline?: boolean): string;
     getFiles(userid: string, path: string, files: Array<string>): string;
     // Vignette/aperçu d'un fichier (image, pdf, vidéo…) — Content-Disposition: inline, adapté à un <img src>.
     getPreviewUrl(userid: string, fileId: number, width?: number, height?: number): string;
@@ -129,11 +129,12 @@ export const nextcloudService: INextcloudService = {
         return http.delete(`/nextcloud/files/user/${userid}/trash/delete`);
     },
 
-    getFile: (userid: string, fileName: string, path: string, contentType: string, isFolder: boolean = false): string => {
+    getFile: (userid: string, fileName: string, path: string, contentType: string, isFolder: boolean = false, inline: boolean = false): string => {
         const pathParam: string = path ? `?path=${path}` : '';
         const contentTypeParam: string = path && contentType ? `&contentType=${contentType}` : '';
         const isFolderParam: string = pathParam ? `&isFolder=${isFolder}` : `?isFolder=${isFolder}`;
-        const urlParam: string = `${pathParam}${contentTypeParam}${isFolderParam}`;
+        const inlineParam: string = inline ? `&inline=true` : '';
+        const urlParam: string = `${pathParam}${contentTypeParam}${isFolderParam}${inlineParam}`;
         return `/nextcloud/files/user/${userid}/file/${encodeURI(fileName)}/download${urlParam}`;
     },
 

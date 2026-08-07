@@ -94,6 +94,7 @@ public class DocumentsController extends ControllerHelper {
         String path = request.getParam(Field.PATH);
         String contentType = request.getParam(Field.CONTENTTYPE);
         boolean isFolder = Boolean.parseBoolean(request.getParam(Field.ISFOLDER));
+        boolean inline = Boolean.parseBoolean(request.getParam(Field.INLINE));
         UserUtils.getUserInfos(eb, request, user ->
                 userService.getUserSession(user.getUserId())
                         .compose(userSession -> {
@@ -111,8 +112,12 @@ public class DocumentsController extends ControllerHelper {
                                         .putHeader("Content-Description", "File Transfer")
                                         .putHeader("Content-Transfer-Encoding", "binary");
                             } else {
+                                // inline : le navigateur affiche le fichier (PDF, image...) au lieu de le
+                                // télécharger — utilisé par le clic "ouvrir" sur un document non éditable,
+                                // par opposition au bouton "Télécharger" qui veut toujours "attachment".
+                                String disposition = (inline ? "inline" : "attachment") + "; filename=" + fileName;
                                 resp.putHeader("Content-type", contentType + "; charset=utf-8")
-                                        .putHeader("Content-Disposition", "attachment; filename=" + fileName);
+                                        .putHeader("Content-Disposition", disposition);
                             }
                             resp.end(fileResponse.body());
                         })

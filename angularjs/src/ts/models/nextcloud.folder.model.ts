@@ -84,8 +84,10 @@ export class SyncDocument {
     }
 
     isEditable(): boolean {
+        // PDF exclu : l'API Nextcloud directEditing/open (utilisée par getEditUrl) ne gère que
+        // les formats bureautiques (odt/docx/xlsx/pptx...) et répond 403 sur un PDF. Un PDF
+        // s'ouvre en lecture via getFile() (fallback de onOpenContent quand editable=false).
         return (<any>[  DocumentRole.DOC,
-                        DocumentRole.PDF,
                         DocumentRole.XLS,
                         DocumentRole.PPT
         ]).includes(this.role);

@@ -335,8 +335,9 @@ class ViewModel implements IViewModel {
             this.selectedDocuments = [];
         } else {
             if (document.editable) {
-                // Fichier bureautique/PDF : ouvrir l'éditeur en ligne (OnlyOffice via l'API Direct Editing
-                // du cœur) via une URL à token fabriquée par le connecteur avec le token per-user — sans login.
+                // Fichier bureautique (doc/xls/ppt) : ouvrir l'éditeur en ligne (OnlyOffice via l'API Direct
+                // Editing du cœur) via une URL à token fabriquée par le connecteur avec le token per-user —
+                // sans login. Le PDF n'est PAS éditable via cette API (Nextcloud renvoie 403), cf isEditable().
                 nextcloudService.getEditUrl(model.me.userId, document.path)
                     .then((url: string) => window.open(url))
                     .catch((err: AxiosError) => {
@@ -344,6 +345,7 @@ class ViewModel implements IViewModel {
                         console.error('[Nextcloud@onOpenContent] Failed to open online editor: ', err);
                     });
             } else {
+                // inline=true : le navigateur affiche le fichier (PDF, image...) au lieu de le télécharger.
                 window.open(this.getFile(document));
             }
 
@@ -351,7 +353,7 @@ class ViewModel implements IViewModel {
     }
 
     getFile(document: SyncDocument): string {
-        return this.nextcloudService.getFile(model.me.userId, document.name, document.path, document.contentType);
+        return this.nextcloudService.getFile(model.me.userId, document.name, document.path, document.contentType, false, true);
     }
 
     getPreviewUrl(document: SyncDocument): string {

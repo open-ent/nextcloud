@@ -87,6 +87,7 @@ public class Field {
 
 
     public static final String ISFOLDER = "isFolder";
+    public static final String INLINE = "inline";
 
     // Config
     public static final String ADMINCREDENTIAL = "admin-credential";
