@@ -11,6 +11,7 @@ import {
   inputStyle,
 } from "./style";
 import { DeletableChip } from "../DeletableChip";
+import { OverrideBadge } from "~/components/OverrideBadge";
 import { useGlobalProvider } from "~/providers/GlobalProvider";
 import { flexStartBoxStyle } from "~/styles/boxStyles";
 
@@ -23,6 +24,8 @@ export const ExcludedExtensions: FC = () => {
     setInputExtension,
     handleExcludedExtensionsChange,
     handleAddExcludedExtensions,
+    selectedStructureId,
+    structureOverrides,
   } = useGlobalProvider();
 
   const handleFocus = () => {
@@ -38,6 +41,9 @@ export const ExcludedExtensions: FC = () => {
       <Typography variant="h2" sx={flexStartBoxStyle}>
         {t("nextcloud.console.excluded.extensions")}
       </Typography>
+      {selectedStructureId && (
+        <OverrideBadge isOverridden={!!structureOverrides?.excludedExtensions} />
+      )}
       <Box sx={excludedContentStyle} id="excluded-extensions">
         <Box sx={inputStyle}>
           <TextField

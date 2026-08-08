@@ -7,6 +7,7 @@ import { alertStyle, consoleContentStyle, consoleTitleStyle } from "./style";
 import { BwLimits } from "~/components/BwLimits";
 import { ExcludedExtensions } from "~/components/ExcludedExtensions";
 import { ShareStructures } from "~/components/ShareStructures";
+import { StructureSelector } from "~/components/StructureSelector";
 import { NextcloudConsoleIcon } from "~/components/SVG/NextcloudConsoleIcon";
 import { SyncFolder } from "~/components/SyncFolder";
 import { useGlobalProvider } from "~/providers/GlobalProvider";
@@ -25,6 +26,7 @@ export const MainPage: FC = () => {
     showSuccessAlert,
     saveError,
     inputValues,
+    selectedStructureId,
   } = useGlobalProvider();
   return (
     <Box>
@@ -48,18 +50,24 @@ export const MainPage: FC = () => {
       </Box>
       <Box sx={{ ...consoleContentStyle }}>
         <Box sx={{ ...columnBoxStyle, gap: "2rem" }}>
+          <StructureSelector />
           <SyncFolder />
+          {/* Bande passante réglable au national ET par établissement (dépend de
+              l'infrastructure propre à chaque établissement). */}
           <BwLimits />
           <ExcludedExtensions />
+          {/* Partage inter-établissements : fonctionnalité déjà propre à chaque établissement,
+              indépendante du découpage national/local ci-dessus — toujours visible. */}
           <ShareStructures />
         </Box>
-        {(!inputValues.syncFolder ||
-          inputValues.uploadLimit <= 0 ||
-          inputValues.downloadLimit <= 0) && (
-          <Alert severity="warning" sx={{ mb: 1 }}>
-            {t("nextcloud.console.save.requires.folder")}
-          </Alert>
-        )}
+        {!selectedStructureId &&
+          (!inputValues.syncFolder ||
+            inputValues.uploadLimit <= 0 ||
+            inputValues.downloadLimit <= 0) && (
+            <Alert severity="warning" sx={{ mb: 1 }}>
+              {t("nextcloud.console.save.requires.folder")}
+            </Alert>
+          )}
         {saveError && (
           <Alert severity="error" sx={{ mb: 1 }}>
             {saveError}

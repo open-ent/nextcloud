@@ -14,6 +14,8 @@ import {
   DesktopConfig,
   GlobalProviderContextType,
   GlobalProviderProps,
+  MyStructure,
+  StructureConfigOverrides,
 } from "./types";
 import {
   initialDesktopConfigValues,
@@ -34,10 +36,44 @@ export const useGlobalProvider = () => {
 };
 
 export const GlobalProvider: FC<GlobalProviderProps> = ({ children }) => {
-  const { useGetDesktopConfigQuery, useUpdateDesktopConfigMutation } =
-    desktopConfigApi;
-  const { data } = useGetDesktopConfigQuery(null);
+  const {
+    useGetDesktopConfigQuery,
+    useUpdateDesktopConfigMutation,
+    useGetMyStructuresQuery,
+    useGetStructureConfigQuery,
+    useUpdateStructureConfigMutation,
+  } = desktopConfigApi;
+
+  const [selectedStructureId, setSelectedStructureId] = useState<string | null>(null);
+
+  const { data: myStructuresData } = useGetMyStructuresQuery(null);
+  const isAdmc = !!myStructuresData?.isAdmc;
+  const myStructures: MyStructure[] = myStructuresData?.structures ?? [];
+
+  useEffect(() => {
+    // Le super-admin ne choisit jamais d'établissement ici (il ne règle que le préfixe
+    // national). Un admin local arrive déjà sur SON établissement : s'il n'en gère qu'un,
+    // on le sélectionne directement, sans lui demander de choisir. Un sélecteur n'est
+    // proposé (cf. StructureSelector) que s'il en gère plusieurs.
+    if (!isAdmc && myStructures.length === 1 && !selectedStructureId) {
+      setSelectedStructureId(myStructures[0].id);
+    }
+  }, [isAdmc, myStructures, selectedStructureId]);
+
+  // Réglage national ou surcharge d'établissement, selon la sélection : un seul des deux
+  // appels est actif à la fois (skip), l'autre garde son cache pour un aller-retour rapide.
+  const { data: nationalData } = useGetDesktopConfigQuery(null, {
+    skip: !!selectedStructureId,
+  });
+  const { data: structureData } = useGetStructureConfigQuery(selectedStructureId as string, {
+    skip: !selectedStructureId,
+  });
+  const data = selectedStructureId ? structureData : nationalData;
+  const structureOverrides: StructureConfigOverrides | null =
+    selectedStructureId && structureData?.overrides ? structureData.overrides : null;
+
   const [updateDesktopConfig] = useUpdateDesktopConfigMutation();
+  const [updateStructureConfig] = useUpdateStructureConfigMutation();
   const [desktopConfigValues, setDesktopConfigValues] = useState<DesktopConfig>(
     initialDesktopConfigValues,
   );
@@ -51,22 +87,26 @@ export const GlobalProvider: FC<GlobalProviderProps> = ({ children }) => {
 
   useEffect(() => {
     if (data) {
-      setDesktopConfigValues(data);
-      setInputValues(data);
+      // La config d'établissement est partielle (pas de limites de bande passante à ce
+      // niveau, cf. types.ts) : on complète avec les valeurs par défaut de l'écran pour que
+      // les champs non concernés restent neutres/désactivés plutôt qu'undefined.
+      const merged = { ...initialDesktopConfigValues, ...data };
+      setDesktopConfigValues(merged);
+      setInputValues(merged);
     }
   }, [data]);
 
   useEffect(() => {
-    // Le backend exige TOUJOURS un objet complet et valide (dossier renseigné, bande
-    // passante > 0 dans les deux sens) : sans ce contrôle, "Enregistrer" pouvait s'activer
-    // sur une combinaison que le serveur refusait ensuite silencieusement (cf. handleSubmitNewConfig).
-    const isValid =
-      !!inputValues.syncFolder &&
-      inputValues.uploadLimit > 0 &&
-      inputValues.downloadLimit > 0;
+    // En mode établissement, pas de bande passante à valider (réglage national uniquement) :
+    // le backend exige un objet complet UNIQUEMENT pour le national (cf. handleSubmitNewConfig).
+    const isValid = selectedStructureId
+      ? true
+      : !!inputValues.syncFolder &&
+        inputValues.uploadLimit > 0 &&
+        inputValues.downloadLimit > 0;
     const unchanged = JSON.stringify(inputValues) === JSON.stringify(desktopConfigValues);
     setDisabledSave(unchanged || !isValid);
-  }, [inputValues, desktopConfigValues]);
+  }, [inputValues, desktopConfigValues, selectedStructureId]);
 
   const showSuccessAlertTimeout = () => {
     setShowSuccessAlert(true);
@@ -80,7 +120,19 @@ export const GlobalProvider: FC<GlobalProviderProps> = ({ children }) => {
     try {
       // .unwrap() : sans lui, une erreur (ex. bande passante à 0, invalide côté backend)
       // était silencieusement ignorée et le message de succès s'affichait quand même.
-      await updateDesktopConfig(inputValues).unwrap();
+      if (selectedStructureId) {
+        await updateStructureConfig({
+          structureId: selectedStructureId,
+          config: {
+            syncFolder: inputValues.syncFolder,
+            excludedExtensions: inputValues.excludedExtensions,
+            downloadLimit: inputValues.downloadLimit,
+            uploadLimit: inputValues.uploadLimit,
+          },
+        }).unwrap();
+      } else {
+        await updateDesktopConfig(inputValues).unwrap();
+      }
       setInputExtension("");
       showSuccessAlertTimeout();
     } catch (err: any) {
@@ -177,6 +229,11 @@ export const GlobalProvider: FC<GlobalProviderProps> = ({ children }) => {
       handleExcludedExtensionsChange,
       handleAddExcludedExtensions,
       handleRemoveExcludedExtension,
+      isAdmc,
+      myStructures,
+      selectedStructureId,
+      setSelectedStructureId,
+      structureOverrides,
     }),
     [
       desktopConfigValues,
@@ -185,6 +242,10 @@ export const GlobalProvider: FC<GlobalProviderProps> = ({ children }) => {
       disabledSave,
       showSuccessAlert,
       saveError,
+      isAdmc,
+      myStructures,
+      selectedStructureId,
+      structureOverrides,
     ],
   );
 

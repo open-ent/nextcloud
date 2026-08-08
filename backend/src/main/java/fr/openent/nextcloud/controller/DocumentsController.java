@@ -60,7 +60,15 @@ public class DocumentsController extends ControllerHelper {
         final String path = request.getParam(Field.PATH);
         UserUtils.getUserInfos(eb, request, user ->
                 userService.getUserSession(user.getUserId())
-                        .compose(userSession -> documentsService.listFiles(Renders.getHost(request), userSession, path))
+                        .compose(userSession -> {
+                            // Premier accès à la racine de l'espace synchronisé : on s'assure que le
+                            // dossier propre à l'établissement de l'utilisateur existe déjà côté
+                            // Nextcloud (best-effort, ne bloque jamais l'affichage de la liste).
+                            if (StringUtils.isEmpty(path)) {
+                                documentsService.ensureSyncFolderExists(Renders.getHost(request), userSession, user.getStructures());
+                            }
+                            return documentsService.listFiles(Renders.getHost(request), userSession, path);
+                        })
                         .onSuccess(files -> {
                             renderJson(request, new JsonObject().put(Field.DATA, files));
                             if (StringUtils.isEmpty(path)) eventHelper.onAccess(request);
@@ -322,14 +330,24 @@ public class DocumentsController extends ControllerHelper {
                 userService.getUserSession(user.getUserId())
                         .compose(userSession -> {
                             request.resume();
-                            return documentsService.uploadStreamedMultipleFiles(Field.FILECOUNT, request, userSession, vertx);
+                            return documentsService.uploadStreamedMultipleFiles(Field.FILECOUNT, request, userSession, vertx, user.getStructures());
                         })
                         .onSuccess(res -> {
                             renderJson(request, res);
                             eventHelper.onCreateResource(request, RESOURCE_DOC);
                         })
-                        .onFailure(err -> renderError(request, new JsonObject().put(Field.ERROR, err.getMessage()))));
+                        .onFailure(err -> renderExtensionOrGenericError(request, err)));
 
+    }
+
+    // "extension.forbidden" doit être distinguable côté front pour afficher un message clair
+    // à l'utilisateur (cf. DefaultDocumentsService#checkExtensionAllowed), pas juste une 500.
+    private void renderExtensionOrGenericError(HttpServerRequest request, Throwable err) {
+        if ("extension.forbidden".equals(err.getMessage())) {
+            Renders.renderJson(request, new JsonObject().put(Field.ERROR, "extension.forbidden"), 403);
+        } else {
+            renderError(request, new JsonObject().put(Field.ERROR, err.getMessage()));
+        }
     }
 
     @Put("/files/user/:userid/move/workspace")

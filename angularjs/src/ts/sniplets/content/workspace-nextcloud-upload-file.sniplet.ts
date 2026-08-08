@@ -76,6 +76,8 @@ export class UploadFileSnipletViewModel implements IViewModel {
                 console.error(`${message}${err.message}: ${this.vm.toolbar.getErrorMessage(err)}`);
                 if (err.message.includes("413") || err.message.includes("507")) {
                     notify.error(lang.translate('file.too.large.upload'));
+                } else if (err.response && err.response.data && err.response.data.error === "extension.forbidden") {
+                    notify.error(lang.translate('nextcloud.fail.upload.extension.forbidden'));
                 } else {
                     notify.error(lang.translate('nextcloud.fail.upload'));
                 }

@@ -10,6 +10,7 @@ import {
   syncFolderInstructionsStyle,
   syncFolderStyle,
 } from "./style";
+import { OverrideBadge } from "~/components/OverrideBadge";
 import { useGlobalProvider } from "~/providers/GlobalProvider";
 import { columnBoxStyle, flexStartBoxStyle } from "~/styles/boxStyles";
 
@@ -18,6 +19,8 @@ export const SyncFolder: FC = () => {
   const {
     inputValues: { syncFolder },
     handleSyncFolderChange,
+    selectedStructureId,
+    structureOverrides,
   } = useGlobalProvider();
 
   return (
@@ -25,6 +28,9 @@ export const SyncFolder: FC = () => {
       <Typography variant="h2" sx={syncFolderStyle}>
         {t("nextcloud.console.sync.folder")}
       </Typography>
+      {selectedStructureId && (
+        <OverrideBadge isOverridden={!!structureOverrides?.syncFolder} />
+      )}
       <Box sx={syncFolderContentStyle}>
         <Box sx={flexStartBoxStyle}>
           <TextField
@@ -47,10 +53,14 @@ export const SyncFolder: FC = () => {
           </Box>
         </Box>
         <Typography variant="body2" sx={syncFolderInstructionsStyle}>
-          {t("nextcloud.console.folder.location.instructions")}
+          {t(
+            selectedStructureId
+              ? "nextcloud.console.folder.location.instructions.structure"
+              : "nextcloud.console.folder.location.instructions",
+          )}
         </Typography>
         <Typography variant="body2" sx={syncFolderInstructionsStyle}>
-          {t("nextcloud.console.folder.os.note")}
+          {t("nextcloud.console.folder.os.note").replaceAll("{folder}", syncFolder)}
         </Typography>
       </Box>
     </Box>

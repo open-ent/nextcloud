@@ -28,6 +28,12 @@ public interface DocumentsService {
     Future<JsonArray> listFiles(String host, UserNextcloud.TokenProvider userSession, String path);
 
     /**
+     * Crée automatiquement, côté serveur Nextcloud, le dossier synchronisé de l'utilisateur
+     * s'il n'existe pas déjà (best-effort, ne remonte pas d'erreur bloquante).
+     */
+    void ensureSyncFolderExists(String host, UserNextcloud.TokenProvider userSession, List<String> userStructures);
+
+    /**
      * Récupère une URL d'édition bureautique en ligne (OnlyOffice) pour un fichier, via l'API
      * « Direct Editing » du cœur de NextCloud. L'appel est authentifié avec le token per-user
      * que le connecteur détient déjà (aucune session NextCloud n'est demandée à l'utilisateur).
@@ -185,7 +191,7 @@ public interface DocumentsService {
      */
     Future<JsonArray> uploadFiles(String host, UserNextcloud.TokenProvider userSession, List<Attachment> files, String path);
 
-    Future<JsonArray> uploadStreamedMultipleFiles(String headerCount, HttpServerRequest request, UserNextcloud.TokenProvider user, Vertx vertx);
+    Future<JsonArray> uploadStreamedMultipleFiles(String headerCount, HttpServerRequest request, UserNextcloud.TokenProvider user, Vertx vertx, List<String> userStructures);
 
     /**
      * Copy all the files listed in the filesPath from nextcloud to local.
