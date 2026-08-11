@@ -1,7 +1,7 @@
 {
   "nextcloud.title": "Nextcloud",
-  "nextcloud.virtual.media.title": "Synchronized documents",
-  "nextcloud.documents": "Synchronized documents",
+  "nextcloud.virtual.media.title": "Synchronized documents with NextCloud",
+  "nextcloud.documents": "Synchronized documents with NextCloud",
   "nextcloud.edit.error": "Unable to open the online editor for this document.",
   "create.nextcloud.documents": "Create a synchronized folder",
   "nextcloud.quota": "Synchronized used space",
