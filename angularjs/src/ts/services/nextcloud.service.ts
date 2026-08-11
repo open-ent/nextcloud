@@ -12,6 +12,7 @@ export interface INextcloudService {
     moveDocument(userid: string, path: string, destPath: string): Promise<AxiosResponse>;
     moveDocumentNextcloudToWorkspace(userid: string, paths: Array<string>, parentId?: string): Promise<AxiosResponse>;
     moveDocumentWorkspaceToCloud(userid: string, ids: Array<string>, cloudDocumentName?: string): Promise<AxiosResponse>;
+    copyDocumentWorkspaceToCloud(userid: string, ids: Array<string>, cloudDocumentName?: string): Promise<AxiosResponse>;
     copyDocumentToWorkspace(userid: string, paths: Array<string>, parentId?: string): Promise<Array<models.Element>>;
     deleteDocuments(userid: string, path: Array<string>): Promise<AxiosResponse>;
     deleteTrash(userid: string): Promise<AxiosResponse>;
@@ -105,6 +106,16 @@ export const nextcloudService: INextcloudService = {
         ids.forEach((path: string) => urlParams.append('id', path));
         const parentDocumentNameParam: string = cloudDocumentName ? `&parentName=${cloudDocumentName}` : '';
         return http.put(`/nextcloud/files/user/${userid}/workspace/move/cloud?${urlParams}${parentDocumentNameParam}`);
+    },
+
+    // Copie (et non déplacement) de documents de l'espace doc ENT vers NextCloud :
+    // le document reste dans le workspace ET une copie part dans le dossier NextCloud
+    // choisi. Utilise l'endpoint backend copyDocumentsFromWorkspaceToNC (copy/cloud).
+    copyDocumentWorkspaceToCloud: (userid: string, ids: Array<string>, cloudDocumentName?: string): Promise<AxiosResponse> => {
+        let urlParams: URLSearchParams = new URLSearchParams();
+        ids.forEach((path: string) => urlParams.append('id', path));
+        const parentDocumentNameParam: string = cloudDocumentName ? `&parentName=${cloudDocumentName}` : '';
+        return http.put(`/nextcloud/files/user/${userid}/workspace/copy/cloud?${urlParams}${parentDocumentNameParam}`);
     },
 
     copyDocumentToWorkspace(userid: string, paths: Array<string>, parentId?: string): Promise<Array<models.Element>> {
