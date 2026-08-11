@@ -1,6 +1,7 @@
 package fr.openent.nextcloud;
 
 import fr.openent.nextcloud.config.NextcloudConfig;
+import fr.openent.nextcloud.config.NextcloudConfigByHost;
 import fr.openent.nextcloud.controller.DocumentsController;
 import fr.openent.nextcloud.controller.NextcloudController;
 import fr.openent.nextcloud.controller.UserController;
@@ -19,7 +20,6 @@ import org.entcore.common.sql.Sql;
 import org.entcore.common.storage.Storage;
 import org.entcore.common.storage.StorageFactory;
 
-import java.util.HashMap;
 import java.util.Map;
 
 public class Nextcloud extends BaseServer {
@@ -37,16 +37,19 @@ public class Nextcloud extends BaseServer {
   }
 
   public Future<Void> initNextcloud() {
-		final Map<String, NextcloudConfig> nextcloudConfigMapByHost = new HashMap<>();
+		// Le bloc racine du module décrit déjà un NextCloud complet (nextcloud-host,
+		// admin-credential, endpoint…) : il sert de configuration de repli pour tout host non
+		// déclaré dans nextcloud-providers, cf. NextcloudConfigByHost.
+		final NextcloudConfig defaultConfig = new NextcloudConfig(config);
+		final NextcloudConfigByHost nextcloudConfigMapByHost = new NextcloudConfigByHost(defaultConfig);
 		if (config.containsKey("nextcloud-providers")) {
 			final JsonObject nexcloudProviders = config.getJsonObject("nextcloud-providers", new JsonObject());
 			for (String host : nexcloudProviders.getMap().keySet()) {
-				nextcloudConfigMapByHost.put(host, new NextcloudConfig(nexcloudProviders.getJsonObject(host, new JsonObject())));
+				nextcloudConfigMapByHost.register(host, new NextcloudConfig(nexcloudProviders.getJsonObject(host, new JsonObject())));
 			}
 		} else {
 			final String host = config.getString("host").split("//")[1];
-			NextcloudConfig nextcloudConfig = new NextcloudConfig(config);
-			nextcloudConfigMapByHost.put(host, nextcloudConfig);
+			nextcloudConfigMapByHost.register(host, defaultConfig);
 		}
 
 		return StorageFactory.build(vertx, config)
