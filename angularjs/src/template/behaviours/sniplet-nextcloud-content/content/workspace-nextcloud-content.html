@@ -6,11 +6,18 @@
         </div>
 
         <!-- action : importer des fichiers dans NextCloud (bouton persistant, en plus de la
-             dropzone), aligné à droite. Affiché seulement si droit d'écriture sur le dossier. -->
+             dropzone), aligné à droite. Affiché seulement si droit d'écriture sur le dossier.
+             On ouvre le sélecteur de fichiers NATIF (input caché) puis on délègue à
+             onImportFiles() — le même traitement que le glisser-déposer. L'ancien
+             toggleUploadFilesView(true) ouvrait le popup d'upload VIDE (sans sélecteur)
+             d'où le « popup blanc ». Pattern angular.element(this).scope() déjà utilisé
+             ailleurs dans le connecteur (debugInfo actif). -->
         <div class="cell right-magnet" ng-if="vm.canDropOnFolder()">
-            <button type="button" ng-click="vm.upload.toggleUploadFilesView(true)">
+            <label class="button" style="cursor:pointer;">
                 <i18n>import</i18n>
-            </button>
+                <input type="file" multiple style="display:none;"
+                       onchange="angular.element(this).scope().vm.upload.onImportFiles(this.files); angular.element(this).scope().$apply();" />
+            </label>
         </div>
 
         <!-- view mode -->
