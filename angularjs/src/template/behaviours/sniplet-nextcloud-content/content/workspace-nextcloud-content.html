@@ -5,9 +5,9 @@
             <i18n>nextcloud.url.connect</i18n> &#58; <a target="_blank" ng-href="[[vm.nextcloudUrl]]">[[vm.nextcloudUrl]]</a>
         </div>
 
-        <!-- action : importer des fichiers dans NextCloud (bouton persistant, en plus de
-             la dropzone). Affiché seulement si l'utilisateur peut écrire dans le dossier. -->
-        <div class="cell" ng-if="vm.canDropOnFolder()">
+        <!-- action : importer des fichiers dans NextCloud (bouton persistant, en plus de la
+             dropzone), aligné à droite. Affiché seulement si droit d'écriture sur le dossier. -->
+        <div class="cell right-magnet" ng-if="vm.canDropOnFolder()">
             <button type="button" ng-click="vm.upload.toggleUploadFilesView(true)">
                 <i18n>import</i18n>
             </button>
