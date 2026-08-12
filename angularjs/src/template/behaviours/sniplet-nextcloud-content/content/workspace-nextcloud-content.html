@@ -13,11 +13,11 @@
              d'où le « popup blanc ». Pattern angular.element(this).scope() déjà utilisé
              ailleurs dans le connecteur (debugInfo actif). -->
         <div class="cell right-magnet" ng-if="vm.canDropOnFolder()">
-            <label class="button" style="cursor:pointer;">
+            <button type="button" onclick="this.parentNode.querySelector('input[type=file]').click()">
                 <i18n>import</i18n>
-                <input type="file" multiple style="display:none;"
-                       onchange="angular.element(this).scope().vm.upload.onImportFiles(this.files); angular.element(this).scope().$apply();" />
-            </label>
+            </button>
+            <input type="file" multiple style="display:none;"
+                   onchange="angular.element(this).scope().vm.upload.onImportFiles(this.files); angular.element(this).scope().$apply();" />
         </div>
 
         <!-- view mode -->
