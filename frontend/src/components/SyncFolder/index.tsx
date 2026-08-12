@@ -60,7 +60,10 @@ export const SyncFolder: FC = () => {
           )}
         </Typography>
         <Typography variant="body2" sx={syncFolderInstructionsStyle}>
-          {t("nextcloud.console.folder.os.note").replaceAll("{folder}", syncFolder)}
+          {t("nextcloud.console.folder.os.note").replaceAll(
+            "{folder}",
+            syncFolder,
+          )}
         </Typography>
       </Box>
     </Box>

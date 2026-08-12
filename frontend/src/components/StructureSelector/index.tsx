@@ -1,6 +1,12 @@
 import { FC } from "react";
 
-import { Box, MenuItem, Select, SelectChangeEvent, Typography } from "@mui/material";
+import {
+  Box,
+  MenuItem,
+  Select,
+  SelectChangeEvent,
+  Typography,
+} from "@mui/material";
 import { useTranslation } from "react-i18next";
 
 import { useGlobalProvider } from "~/providers/GlobalProvider";

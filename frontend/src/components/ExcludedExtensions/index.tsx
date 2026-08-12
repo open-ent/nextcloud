@@ -42,7 +42,9 @@ export const ExcludedExtensions: FC = () => {
         {t("nextcloud.console.excluded.extensions")}
       </Typography>
       {selectedStructureId && (
-        <OverrideBadge isOverridden={!!structureOverrides?.excludedExtensions} />
+        <OverrideBadge
+          isOverridden={!!structureOverrides?.excludedExtensions}
+        />
       )}
       <Box sx={excludedContentStyle} id="excluded-extensions">
         <Box sx={inputStyle}>

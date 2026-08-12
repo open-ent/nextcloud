@@ -44,7 +44,9 @@ export const GlobalProvider: FC<GlobalProviderProps> = ({ children }) => {
     useUpdateStructureConfigMutation,
   } = desktopConfigApi;
 
-  const [selectedStructureId, setSelectedStructureId] = useState<string | null>(null);
+  const [selectedStructureId, setSelectedStructureId] = useState<string | null>(
+    null,
+  );
 
   const { data: myStructuresData } = useGetMyStructuresQuery(null);
   const isAdmc = !!myStructuresData?.isAdmc;
@@ -65,12 +67,17 @@ export const GlobalProvider: FC<GlobalProviderProps> = ({ children }) => {
   const { data: nationalData } = useGetDesktopConfigQuery(null, {
     skip: !!selectedStructureId,
   });
-  const { data: structureData } = useGetStructureConfigQuery(selectedStructureId as string, {
-    skip: !selectedStructureId,
-  });
+  const { data: structureData } = useGetStructureConfigQuery(
+    selectedStructureId as string,
+    {
+      skip: !selectedStructureId,
+    },
+  );
   const data = selectedStructureId ? structureData : nationalData;
   const structureOverrides: StructureConfigOverrides | null =
-    selectedStructureId && structureData?.overrides ? structureData.overrides : null;
+    selectedStructureId && structureData?.overrides
+      ? structureData.overrides
+      : null;
 
   const [updateDesktopConfig] = useUpdateDesktopConfigMutation();
   const [updateStructureConfig] = useUpdateStructureConfigMutation();
@@ -104,7 +111,8 @@ export const GlobalProvider: FC<GlobalProviderProps> = ({ children }) => {
       : !!inputValues.syncFolder &&
         inputValues.uploadLimit > 0 &&
         inputValues.downloadLimit > 0;
-    const unchanged = JSON.stringify(inputValues) === JSON.stringify(desktopConfigValues);
+    const unchanged =
+      JSON.stringify(inputValues) === JSON.stringify(desktopConfigValues);
     setDisabledSave(unchanged || !isValid);
   }, [inputValues, desktopConfigValues, selectedStructureId]);
 

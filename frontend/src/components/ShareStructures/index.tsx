@@ -57,14 +57,19 @@ export const ShareStructures: FC = () => {
     setInputValue(value);
     clearTimeout(searchTimeout);
     if (value.trim().length < SEARCH_MIN_LENGTH) return;
-    searchTimeout = setTimeout(() => searchStructures(value.trim()), SEARCH_DEBOUNCE_MS);
+    searchTimeout = setTimeout(
+      () => searchStructures(value.trim()),
+      SEARCH_DEBOUNCE_MS,
+    );
   };
 
   const handleAdd = async () => {
     if (!selectedStructure) return;
     setError("");
     try {
-      await addShareStructure({ targetStructureId: selectedStructure.id }).unwrap();
+      await addShareStructure({
+        targetStructureId: selectedStructure.id,
+      }).unwrap();
       setSelectedStructure(null);
       setInputValue("");
     } catch (err: any) {
@@ -75,11 +80,14 @@ export const ShareStructures: FC = () => {
   };
 
   const handleDelete = async (rule: ShareStructureRule) => {
-    const label =
-      `${rule.structureName ?? rule.structureId} ↔ ${rule.targetStructureName ?? rule.targetStructureId}`;
+    const label = `${rule.structureName ?? rule.structureId} ↔ ${
+      rule.targetStructureName ?? rule.targetStructureId
+    }`;
     if (
       typeof window !== "undefined" &&
-      !window.confirm(t("nextcloud.console.share.structures.delete.confirm", { label }))
+      !window.confirm(
+        t("nextcloud.console.share.structures.delete.confirm", { label }),
+      )
     ) {
       return;
     }
@@ -131,7 +139,9 @@ export const ShareStructures: FC = () => {
               <TextField
                 {...params}
                 variant="outlined"
-                placeholder={t("nextcloud.console.share.structures.uai.placeholder")}
+                placeholder={t(
+                  "nextcloud.console.share.structures.uai.placeholder",
+                )}
                 InputProps={{
                   ...params.InputProps,
                   endAdornment: (
@@ -171,7 +181,9 @@ export const ShareStructures: FC = () => {
                   (rule.structureUai ? ` (${rule.structureUai})` : "") +
                   " ↔ " +
                   (rule.targetStructureName || rule.targetStructureId) +
-                  (rule.targetStructureUai ? ` (${rule.targetStructureUai})` : "")}
+                  (rule.targetStructureUai
+                    ? ` (${rule.targetStructureUai})`
+                    : "")}
               </Typography>
               <IconButton onClick={() => handleDelete(rule)}>
                 <CloseIcon />

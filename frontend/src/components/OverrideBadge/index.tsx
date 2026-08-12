@@ -6,7 +6,9 @@ import { useTranslation } from "react-i18next";
 // Indique, pour un champ de l'écran d'un établissement, si sa valeur vient d'une surcharge
 // locale ("personnalisé") ou est héritée du national/défaut. Un Chip coloré plutôt qu'un texte
 // discret : ce point avait été signalé illisible en petite légende grise.
-export const OverrideBadge: FC<{ isOverridden: boolean }> = ({ isOverridden }) => {
+export const OverrideBadge: FC<{ isOverridden: boolean }> = ({
+  isOverridden,
+}) => {
   const { t } = useTranslation("nextcloud");
 
   return (

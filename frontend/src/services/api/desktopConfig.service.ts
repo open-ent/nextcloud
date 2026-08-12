@@ -1,5 +1,8 @@
 import { emptySplitApi } from "./emptySplitApi.service";
-import { DesktopConfig, StructureOverride } from "~/providers/GlobalProvider/types";
+import {
+  DesktopConfig,
+  StructureOverride,
+} from "~/providers/GlobalProvider/types";
 
 export const desktopConfigApi = emptySplitApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -23,16 +26,27 @@ export const desktopConfigApi = emptySplitApi.injectEndpoints({
     // Configuration effective (national fusionné avec la surcharge locale) pour un établissement,
     // avec un indicateur "overrides" par champ pour distinguer héritée/personnalisée.
     getStructureConfig: builder.query({
-      query: (structureId: string) => `/desktop/config/structure/${structureId}`,
-      providesTags: (result, error, structureId) => [{ type: "structureConfig", id: structureId }],
+      query: (structureId: string) =>
+        `/desktop/config/structure/${structureId}`,
+      providesTags: (result, error, structureId) => [
+        { type: "structureConfig", id: structureId },
+      ],
     }),
     updateStructureConfig: builder.mutation({
-      query: ({ structureId, config }: { structureId: string; config: StructureOverride }) => ({
+      query: ({
+        structureId,
+        config,
+      }: {
+        structureId: string;
+        config: StructureOverride;
+      }) => ({
         url: `/desktop/config/structure/${structureId}`,
         method: "PUT",
         body: config,
       }),
-      invalidatesTags: (result, error, { structureId }) => [{ type: "structureConfig", id: structureId }],
+      invalidatesTags: (result, error, { structureId }) => [
+        { type: "structureConfig", id: structureId },
+      ],
     }),
   }),
 });

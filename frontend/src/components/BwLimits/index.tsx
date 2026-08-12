@@ -31,7 +31,12 @@ export const BwLimits: FC = () => {
       </Typography>
       {selectedStructureId && (
         <OverrideBadge
-          isOverridden={!!(structureOverrides?.uploadLimit || structureOverrides?.downloadLimit)}
+          isOverridden={
+            !!(
+              structureOverrides?.uploadLimit ||
+              structureOverrides?.downloadLimit
+            )
+          }
         />
       )}
       <Typography variant="body2" sx={instructionsStyle}>
