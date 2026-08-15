@@ -80,31 +80,6 @@ export class MediaLibraryService implements IVirtualMediaLibraryScope {
     constructor() {
         this.folders = [];
         this.documents = [];
-        MediaLibraryService.injectAlignmentStyle();
-    }
-
-    /**
-     * Aligne le dossier virtuel « Documents synchronisés avec NextCloud » avec les autres entrées
-     * du picker de documents. Le virtual-folder est rendu (dans infra-front) via un <nav
-     * class="mobile-navigation"><ul> imbriqué dont le <ul> conserve son padding-left par défaut
-     * (~40px) -> l'entrée apparaît décalée vers la droite. Comme le template vient du framework
-     * partagé (infra-front, déploiement infra lourd), on corrige ici via une surcharge CSS scopée
-     * au picker (.media-library), injectée une seule fois par les behaviours (chargés globalement).
-     */
-    private static injectAlignmentStyle(): void {
-        const STYLE_ID: string = "nextcloud-medialib-align";
-        if (typeof document === "undefined" || document.getElementById(STYLE_ID)) {
-            return;
-        }
-        const style: HTMLStyleElement = document.createElement("style");
-        style.id = STYLE_ID;
-        // Le décalage vient de <a class="folder-list-item"> (dans <folder-tree-inner>), pas du <ul>.
-        // On neutralise le retrait à gauche sur les 3 niveaux possibles, scopé au picker.
-        style.textContent =
-            ".media-library .mobile-navigation ul { padding-left: 0 !important; margin-left: 0 !important; }"
-            + " .media-library .mobile-navigation folder-tree-inner { padding-left: 0 !important; margin-left: 0 !important; }"
-            + " .media-library .mobile-navigation .folder-list-item { padding-left: 0 !important; }";
-        document.head.appendChild(style);
     }
 
     enableInitFolderTree(): boolean {
