@@ -98,7 +98,12 @@ export class MediaLibraryService implements IVirtualMediaLibraryScope {
         }
         const style: HTMLStyleElement = document.createElement("style");
         style.id = STYLE_ID;
-        style.textContent = ".media-library .mobile-navigation ul { padding-left: 0; }";
+        // Le décalage vient de <a class="folder-list-item"> (dans <folder-tree-inner>), pas du <ul>.
+        // On neutralise le retrait à gauche sur les 3 niveaux possibles, scopé au picker.
+        style.textContent =
+            ".media-library .mobile-navigation ul { padding-left: 0 !important; margin-left: 0 !important; }"
+            + " .media-library .mobile-navigation folder-tree-inner { padding-left: 0 !important; margin-left: 0 !important; }"
+            + " .media-library .mobile-navigation .folder-list-item { padding-left: 0 !important; }";
         document.head.appendChild(style);
     }
 
