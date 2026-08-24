@@ -23,8 +23,10 @@
             <input type="file" multiple style="display:none;"
                    onchange="angular.element(this).scope().vm.upload.onImportFiles(this.files); angular.element(this).scope().$apply();" />
         </div>
+    </div>
 
-        <!-- view mode -->
+    <!-- view mode : rangée séparée, sous le bouton Importer -->
+    <div class="row" style="margin-top: 12px;">
         <div class="cell right-magnet">
             <div class="choice-view">
                 <i class="show-icons" ng-class="{ selected: vm.isViewMode('icons') }" ng-click="vm.changeViewMode('icons')"></i>
