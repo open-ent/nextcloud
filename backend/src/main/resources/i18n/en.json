@@ -71,5 +71,16 @@
   "nextcloud.console.share.structures.removed": "Rule removed.",
   "nextcloud.console.share.structures.empty": "No cross-establishment rule.",
   "nextcloud.console.share.structures.error": "An error occurred.",
-  "nextcloud.console.share.structures.delete.confirm": "Remove the [[label]] rule?"
+  "nextcloud.console.share.structures.delete.confirm": "Remove the [[label]] rule?",
+
+  "nextcloud.create.document.title": "Create a document",
+  "nextcloud.create.document.step.1": "File type",
+  "nextcloud.create.document.step.2": "Name",
+  "nextcloud.create.document.type.docx": "Text",
+  "nextcloud.create.document.type.xlsx": "Spreadsheet",
+  "nextcloud.create.document.type.pptx": "Presentation",
+  "nextcloud.create.document.filename": "Document name",
+  "nextcloud.create.document.validation": "Validate",
+  "nextcloud.create.document.success": "The document has been created.",
+  "nextcloud.create.document.error": "An error occurred while creating the document."
 }

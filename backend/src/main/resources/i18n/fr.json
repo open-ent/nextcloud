@@ -72,5 +72,16 @@
   "nextcloud.console.share.structures.removed": "Autorisation retirée.",
   "nextcloud.console.share.structures.empty": "Aucune autorisation inter-établissements.",
   "nextcloud.console.share.structures.error": "Une erreur est survenue.",
-  "nextcloud.console.share.structures.delete.confirm": "Retirer l'autorisation [[label]] ?"
+  "nextcloud.console.share.structures.delete.confirm": "Retirer l'autorisation [[label]] ?",
+
+  "nextcloud.create.document.title": "Créer un document",
+  "nextcloud.create.document.step.1": "Type de fichier",
+  "nextcloud.create.document.step.2": "Nom",
+  "nextcloud.create.document.type.docx": "Texte",
+  "nextcloud.create.document.type.xlsx": "Classeur",
+  "nextcloud.create.document.type.pptx": "Présentation",
+  "nextcloud.create.document.filename": "Nom du document",
+  "nextcloud.create.document.validation": "Valider",
+  "nextcloud.create.document.success": "Le document a été créé.",
+  "nextcloud.create.document.error": "Une erreur est survenue lors de la création du document."
 }

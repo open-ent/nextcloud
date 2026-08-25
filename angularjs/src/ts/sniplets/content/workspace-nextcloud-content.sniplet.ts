@@ -10,6 +10,7 @@ import { NextcloudPreference, Preference } from "../../shared/services";
 import { safeApply } from "../../utils/safe-apply.utils";
 import { ToolbarSnipletViewModel } from "./workspace-nextcloud-toolbar.sniplet";
 import { UploadFileSnipletViewModel } from "./workspace-nextcloud-upload-file.sniplet";
+import { CreateDocumentSnipletViewModel } from "./workspace-nextcloud-create-document.sniplet";
 import { NextcloudViewIcons } from "./workspace-nextcloud-view-icons.sniplet";
 import { NextcloudViewList } from "./workspace-nextcloud-view-list.sniplet";
 import models = workspace.v2.models;
@@ -386,6 +387,7 @@ export const workspaceNextcloudContent = {
                 this.vm = new ViewModel(this, nextcloudService);
                 this.vm.toolbar = new ToolbarSnipletViewModel(this);
                 this.vm.upload = new UploadFileSnipletViewModel(this);
+                this.vm.create = new CreateDocumentSnipletViewModel(this);
                 this.vm.viewList = new NextcloudViewList(this);
                 this.vm.viewIcons = new NextcloudViewIcons(this);
             });

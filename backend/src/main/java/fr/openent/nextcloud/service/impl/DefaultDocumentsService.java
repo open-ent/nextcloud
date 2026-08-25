@@ -51,6 +51,7 @@ public class DefaultDocumentsService implements DocumentsService {
     private final EventBus eventBus;
     private final fr.wseduc.mongodb.MongoDb mongoDb;
     private final org.entcore.common.neo4j.Neo4j neo4j;
+    private final Vertx vertx;
 
     private static final String DOWNLOAD_ENDPOINT = "/index.php/apps/files/ajax/download.php";
 
@@ -63,6 +64,7 @@ public class DefaultDocumentsService implements DocumentsService {
         this.eventBus = serviceFactory.eventBus();
         this.mongoDb = serviceFactory.mongoDb();
         this.neo4j = serviceFactory.neo4j();
+        this.vertx = serviceFactory.vertx();
     }
 
     private static String extensionOf(String filename) {
@@ -1591,5 +1593,39 @@ public class DefaultDocumentsService implements DocumentsService {
         return createFolder(host, userSession, StringHelper.encodeUrlForNc(path.replace(Field.ASCIISPACE, " ")));
     }
 
+    @Override
+    public Future<JsonObject> createDocumentFromTemplate(String host, UserNextcloud.TokenProvider userSession, String type, String name, String path) {
+        Promise<JsonObject> promise = Promise.promise();
+        String templatePath = fr.wseduc.webutils.data.FileResolver.absolutePath("public/nextcloud-templates/template." + type);
+        String filename = name + "." + type;
+        String contentType;
+        try {
+            contentType = Files.probeContentType(java.nio.file.Paths.get(templatePath));
+        } catch (IOException e) {
+            log.error("[Nextcloud@createDocumentFromTemplate] Failed to read content type for type " + type, e);
+            promise.fail(e);
+            return promise.future();
+        }
+        this.vertx.fileSystem().readFile(templatePath, readEvent -> {
+            if (readEvent.failed()) {
+                log.error("[Nextcloud@createDocumentFromTemplate] Failed to read template file " + templatePath, readEvent.cause());
+                promise.fail(readEvent.cause());
+                return;
+            }
+            storage.writeBuffer(readEvent.result(), contentType, filename, storageResult -> {
+                if (!"ok".equals(storageResult.getString(Field.STATUS))) {
+                    promise.fail(storageResult.getString(Field.MESSAGE, "storage.write.failed"));
+                    return;
+                }
+                Attachment attachment = new Attachment(storageResult.getString(Field._ID), new Metadata(storageResult.getJsonObject("metadata")));
+                this.uploadFile(host, userSession, attachment, path, true)
+                        .onSuccess(uploadResult -> promise.complete(new JsonObject()
+                                .put(Field.NAME, filename)
+                                .put(Field.PATH, (path != null && !path.isEmpty() ? path + "/" : "") + filename)))
+                        .onFailure(promise::fail);
+            });
+        });
+        return promise.future();
+    }
 
 }

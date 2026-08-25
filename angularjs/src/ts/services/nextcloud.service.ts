@@ -21,6 +21,8 @@ export interface INextcloudService {
     // Vignette/aperçu d'un fichier (image, pdf, vidéo…) — Content-Disposition: inline, adapté à un <img src>.
     getPreviewUrl(userid: string, fileId: number, width?: number, height?: number): string;
     createFolder(userid: string, folderPath: String): Promise<AxiosResponse>;
+    // Créer un document Office vierge (docx/xlsx/pptx) à partir d'un template, directement dans NextCloud.
+    createDocument(userid: string, type: string, name: string, folderPath?: String): Promise<AxiosResponse>;
     // Édition bureautique en ligne (OnlyOffice) : renvoie une URL d'édition à token,
     // fabriquée côté connecteur avec le token per-user (aucune connexion NextCloud demandée).
     getEditUrl(userid: string, path: string): Promise<string>;
@@ -68,6 +70,11 @@ export const nextcloudService: INextcloudService = {
     createFolder: async(userid: string, folderPath: String): Promise<AxiosResponse> => {
         const urlParam: string = folderPath ? `?path=${folderPath}` : '';
         return http.post(`/nextcloud/files/user/${userid}/create/folder${urlParam}`);
+    },
+
+    createDocument: async(userid: string, type: string, name: string, folderPath?: String): Promise<AxiosResponse> => {
+        const pathParam: string = folderPath ? `&path=${folderPath}` : '';
+        return http.post(`/nextcloud/files/user/${userid}/create/document?type=${type}&name=${encodeURIComponent(name)}${pathParam}`);
     },
 
     listDocument: async (userid: string, path?: string): Promise<Array<SyncDocument>> => {

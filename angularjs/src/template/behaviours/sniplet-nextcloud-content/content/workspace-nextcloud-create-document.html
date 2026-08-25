@@ -1,0 +1,33 @@
+<lightbox on-close="vm.create.toggleCreateDocumentView(false)" show="vm.create.lightbox.createDocument">
+    <div class="row">
+        <h2>
+            <i18n>nextcloud.create.document.title</i18n>
+        </h2>
+    </div>
+    <h4>
+        <i18n>nextcloud.create.document.step.1</i18n>
+    </h4>
+    <div class="row document-type-list vertical-spacing-six">
+        <label ng-repeat="type in vm.create.documentTypeList" class="cell four" style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+            <input type="radio" value="[[type]]" name="nextcloud-create-document-type" ng-model="vm.create.document.type">
+            <span>[[lang.translate('nextcloud.create.document.type.' + type)]]</span>
+        </label>
+    </div>
+    <h4>
+        <i18n>nextcloud.create.document.step.2</i18n>
+    </h4>
+    <div class="row">
+        <div class="cell twelve">
+            <input type="text" ng-model="vm.create.document.name" class="twelve"
+                   i18n-placeholder="nextcloud.create.document.filename"/>
+        </div>
+    </div>
+    <div class="row">
+        <div class="right-magnet">
+            <button ng-click="vm.create.createDocument()"
+                    ng-disabled="vm.create.saving || !vm.create.document.name || !vm.create.document.name.trim()">
+                <i18n>nextcloud.create.document.validation</i18n>
+            </button>
+        </div>
+    </div>
+</lightbox>

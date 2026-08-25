@@ -246,4 +246,15 @@ public interface DocumentsService {
      */
     Future<JsonObject> createFolderNextcloud(String host, UserNextcloud.TokenProvider userSession, String path);
 
+    /**
+     * Create a new blank office document (docx/xlsx/pptx) in the Nextcloud space, from a template
+     * @param host host
+     * @param userSession   User session
+     * @param type          File extension (docx, xlsx or pptx)
+     * @param name          File name without extension
+     * @param path          Path of the destination folder in Nextcloud
+     * @return              Future JsonObject with the created document's name and path
+     */
+    Future<JsonObject> createDocumentFromTemplate(String host, UserNextcloud.TokenProvider userSession, String type, String name, String path);
+
 }

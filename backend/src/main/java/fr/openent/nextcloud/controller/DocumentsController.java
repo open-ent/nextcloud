@@ -39,6 +39,9 @@ public class DocumentsController extends ControllerHelper {
     private final EventHelper eventHelper;
     public static final String RESOURCE_DOC = "document";
     public static final String RESOURCE_FOLDER = "folder";
+    // Whitelist stricte : "type" sert à construire un chemin de fichier template côté serveur
+    // (template.<type>), ne jamais l'accepter tel quel sans validation.
+    private static final List<String> ALLOWED_DOCUMENT_TYPES = List.of("docx", "xlsx", "pptx");
     private final EventBus eventBus;
 
     public DocumentsController(ServiceFactory serviceFactory) {
@@ -438,6 +441,28 @@ public class DocumentsController extends ControllerHelper {
                             .onFailure(err -> renderError(request, new JsonObject().put(Field.ERROR, err.getMessage()))));
         else
             badRequest(request);
+    }
+
+    @Post("/files/user/:userid/create/document")
+    @ApiDoc("Create a blank office document (docx/xlsx/pptx) from a template in Nextcloud")
+    @SecuredAction(value = "", type = ActionType.RESOURCE)
+    @ResourceFilter(OwnerFilter.class)
+    public void createNewDocument(HttpServerRequest request) {
+        String type = request.params().get(Field.TYPE);
+        String name = request.params().get(Field.NAME);
+        String path = request.params().get(Field.PATH);
+        if (StringUtils.isEmpty(type) || StringUtils.isEmpty(name) || !ALLOWED_DOCUMENT_TYPES.contains(type)) {
+            badRequest(request);
+            return;
+        }
+        UserUtils.getUserInfos(eb, request, user ->
+                userService.getUserSession(user.getUserId())
+                        .compose(userSession -> documentsService.createDocumentFromTemplate(Renders.getHost(request), userSession, type, name, path))
+                        .onSuccess(res -> {
+                            renderJson(request, res);
+                            eventHelper.onCreateResource(request, RESOURCE_DOC);
+                        })
+                        .onFailure(err -> renderError(request, new JsonObject().put(Field.ERROR, err.getMessage()))));
     }
 
     private void initializeEventBusConsumers() {
