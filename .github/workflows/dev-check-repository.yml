@@ -2,6 +2,13 @@ name: dev-check-repository
 
 on: [push]
 
+# Sans ce bloc, le GITHUB_TOKEN par défaut n'a pas accès en lecture aux paquets d'un
+# AUTRE repo de l'org (entcore-v2/app-parent) -> 401 Unauthorized au resolve du parent POM
+# (cf. build-and-publish.yml qui déclare packages: write pour la même raison, en plus large).
+permissions:
+  contents: read
+  packages: read
+
 jobs:
   build-node-test:
     runs-on: ubuntu-latest
