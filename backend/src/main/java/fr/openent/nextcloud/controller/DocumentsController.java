@@ -29,6 +29,7 @@ import org.entcore.common.storage.Storage;
 import org.entcore.common.user.UserUtils;
 import org.entcore.common.utils.StringUtils;
 
+import java.util.Arrays;
 import java.util.List;
 
 public class DocumentsController extends ControllerHelper {
@@ -41,7 +42,7 @@ public class DocumentsController extends ControllerHelper {
     public static final String RESOURCE_FOLDER = "folder";
     // Whitelist stricte : "type" sert à construire un chemin de fichier template côté serveur
     // (template.<type>), ne jamais l'accepter tel quel sans validation.
-    private static final List<String> ALLOWED_DOCUMENT_TYPES = List.of("docx", "xlsx", "pptx");
+    private static final List<String> ALLOWED_DOCUMENT_TYPES = Arrays.asList("docx", "xlsx", "pptx");
     private final EventBus eventBus;
 
     public DocumentsController(ServiceFactory serviceFactory) {
