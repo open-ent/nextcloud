@@ -52,7 +52,9 @@ jobs:
       - uses: actions/checkout@v1
       # app-parent (fr.openent:app-parent) vit sur GitHub Packages (entcore-v2), pas sur
       # Maven Central -- sans ce profil, "mvn clean install" échoue en "Non-resolvable
-      # parent POM" avant même de compiler quoi que ce soit.
+      # parent POM" avant même de compiler quoi que ce soit. GITHUB_TOKEN (même avec
+      # packages: read déclaré) ne peut PAS lire les paquets privés d'un AUTRE repo de
+      # l'org -> 401 systématique ; il faut le PAT OPENENT_PACKAGES_TOKEN (cross-repo).
       - name: Configure Maven pour GitHub Packages
         run: |
           mkdir -p /var/maven/.m2
@@ -88,7 +90,7 @@ jobs:
           </settings>
           EOF
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.OPENENT_PACKAGES_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
       - name: Run build maven
         working-directory: ./backend
