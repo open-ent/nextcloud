@@ -151,15 +151,14 @@ jobs:
           PACKAGE_NAME="${GROUP_ID}.${ARTIFACT_ID}"
           # GitHub Packages Maven est immuable : republier la même version sans supprimer
           # d'abord échoue en 409 Conflict -- silencieusement avalé si continue-on-error
-          # est laissé (cf. clobber rct-nexus, même piège, autre registre).
-          for ID in $(curl -sf -H "Authorization: Bearer ${DELETE_TOKEN}" \
-              "https://api.github.com/orgs/open-ent/packages/maven/${PACKAGE_NAME}/versions" \
-              | python3 -c "import sys,json;[print(v['id']) for v in json.load(sys.stdin) if v['name']=='${VERSION}']"); do
-            echo "Suppression de la version existante ${PACKAGE_NAME}:${VERSION} (id ${ID})"
-            curl -sf -X DELETE -H "Authorization: Bearer ${DELETE_TOKEN}" \
-              "https://api.github.com/orgs/open-ent/packages/maven/${PACKAGE_NAME}/versions/${ID}" \
-              || echo "::warning::échec suppression ${ID}"
-          done
+          # est laissé (cf. clobber rct-nexus, même piège, autre registre). L'API refuse de
+          # supprimer la SEULE version d'un package ("must delete the package instead") ; ce
+          # fork ne bumpe jamais de version (toujours la même -patched republiée), donc ce
+          # package n'a jamais qu'une version -> on supprime le package entier avant de le
+          # recréer par le deploy ci-dessous.
+          curl -sf -X DELETE -H "Authorization: Bearer ${DELETE_TOKEN}" \
+            "https://api.github.com/orgs/open-ent/packages/maven/${PACKAGE_NAME}" \
+            || echo "::warning::échec suppression du package ${PACKAGE_NAME} (peut-être déjà absent)"
           echo "Publishing ${GROUP_ID}:${ARTIFACT_ID}:${VERSION}:fat"
           mvn deploy:deploy-file \
             -Dfile="${FAT_JAR}" -DgroupId="${GROUP_ID}" -DartifactId="${ARTIFACT_ID}" \
