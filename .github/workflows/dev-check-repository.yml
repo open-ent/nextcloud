@@ -94,7 +94,16 @@ jobs:
           GITHUB_ACTOR: ${{ github.actor }}
       - name: Run build maven
         working-directory: ./backend
+        # ${env.GITHUB_TOKEN} dans settings.xml est résolu par Maven AU RUNTIME de mvn,
+        # donc DANS ce step précis -- ne pas compter sur l'env du step précédent (qui n'a
+        # servi qu'à écrire le fichier), sinon mot de passe vide -> 401.
+        env:
+          GITHUB_TOKEN: ${{ secrets.OPENENT_PACKAGES_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
         run: mvn -Duser.home=/var/maven clean install
       - name: Run maven test
         working-directory: ./backend
+        env:
+          GITHUB_TOKEN: ${{ secrets.OPENENT_PACKAGES_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
         run: mvn -Duser.home=/var/maven test
