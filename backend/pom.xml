@@ -91,12 +91,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.entcore</groupId>
-      <artifactId>tests</artifactId>
-      <version>${entCoreVersion}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
       <version>${mockitoVersion}</version>
@@ -149,4 +143,18 @@
       <classifier>fat</classifier>
     </dependency>
   </dependencies>
+  <profiles>
+    <profile>
+      <!-- org.entcore:tests ne sert qu'aux scénarios Gatling et n'est pas publié en -patched -->
+      <id>gatling-it</id>
+      <dependencies>
+        <dependency>
+          <groupId>org.entcore</groupId>
+          <artifactId>tests</artifactId>
+          <version>${entCoreVersion}</version>
+          <scope>test</scope>
+        </dependency>
+      </dependencies>
+    </profile>
+  </profiles>
 </project>
