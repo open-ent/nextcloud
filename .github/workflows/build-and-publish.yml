@@ -99,6 +99,11 @@ jobs:
                 <username>${env.GITHUB_ACTOR}</username>
                 <password>${env.GITHUB_TOKEN}</password>
               </server>
+              <server>
+                <id>pt-releases</id>
+                <username>${{ secrets.NEXUS_USER }}</username>
+                <password>${{ secrets.NEXUS_PASSWORD }}</password>
+              </server>
             </servers>
             <profiles>
               <profile>
