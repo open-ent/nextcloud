@@ -28,6 +28,24 @@ public interface DocumentsService {
     Future<JsonArray> listFiles(String host, UserNextcloud.TokenProvider userSession, String path);
 
     /**
+     * Crée automatiquement, côté serveur Nextcloud, le dossier synchronisé de l'utilisateur
+     * s'il n'existe pas déjà (best-effort, ne remonte pas d'erreur bloquante).
+     */
+    void ensureSyncFolderExists(String host, UserNextcloud.TokenProvider userSession, List<String> userStructures);
+
+    /**
+     * Récupère une URL d'édition bureautique en ligne (OnlyOffice) pour un fichier, via l'API
+     * « Direct Editing » du cœur de NextCloud. L'appel est authentifié avec le token per-user
+     * que le connecteur détient déjà (aucune session NextCloud n'est demandée à l'utilisateur).
+     *
+     * @param host        host
+     * @param userSession session utilisateur {@link UserNextcloud.TokenProvider}
+     * @param path        chemin NextCloud du fichier à éditer (relatif à la racine de l'utilisateur)
+     * @return Future contenant {@code {"url": "..."}} vers l'éditeur en ligne
+     */
+    Future<JsonObject> getEditUrl(String host, UserNextcloud.TokenProvider userSession, String path);
+
+    /**
      * Call the list API with specified handler
      *
      * @param host host
@@ -47,6 +65,34 @@ public interface DocumentsService {
      * @return  Future containing Buffer of file {@link Buffer}
      */
     Future<HttpResponse<Buffer>> getFile(String host, UserNextcloud.TokenProvider userSession, String path);
+
+    /**
+     * Récupère la vignette/aperçu d'un fichier (image, pdf, vidéo…) généré par NextCloud,
+     * via l'API cœur {@code /index.php/core/preview}, authentifiée avec le token per-user.
+     *
+     * @param host        host
+     * @param userSession User Session {@link UserNextcloud.TokenProvider}
+     * @param fileId      identifiant NextCloud du fichier (oc:fileid)
+     * @param width       largeur souhaitée de la vignette
+     * @param height      hauteur souhaitée de la vignette
+     * @return  Future containing Buffer of the preview image {@link Buffer}
+     */
+    Future<HttpResponse<Buffer>> getPreview(String host, UserNextcloud.TokenProvider userSession, Number fileId, int width, int height);
+
+    /**
+     * Partage un fichier/dossier NextCloud avec un autre utilisateur ENT (partage NextCloud natif :
+     * le fichier reste chez son propriétaire, le destinataire y accède via son propre compte NextCloud).
+     * Une fois le fichier partagé, les deux utilisateurs peuvent l'ouvrir en édition (getEditUrl) et
+     * co-éditer en temps réel via OnlyOffice (coproduction native, aucun développement supplémentaire).
+     *
+     * @param host           host
+     * @param userSession    session du propriétaire (celui qui partage) {@link UserNextcloud.TokenProvider}
+     * @param path           chemin NextCloud du fichier/dossier à partager
+     * @param targetUserId   identifiant ENT (= identifiant NextCloud) du destinataire du partage
+     * @param permissions    permissions NextCloud du partage (1=lecture, 3=lecture+écriture, 31=tous droits)
+     * @return Future contenant la réponse OCS Share de NextCloud
+     */
+    Future<JsonObject> shareWithUser(String host, UserNextcloud.TokenProvider userSession, String path, String targetUserId, int permissions);
 
     /**
      * get/download folder
@@ -145,7 +191,7 @@ public interface DocumentsService {
      */
     Future<JsonArray> uploadFiles(String host, UserNextcloud.TokenProvider userSession, List<Attachment> files, String path);
 
-    Future<JsonArray> uploadStreamedMultipleFiles(String headerCount, HttpServerRequest request, UserNextcloud.TokenProvider user, Vertx vertx);
+    Future<JsonArray> uploadStreamedMultipleFiles(String headerCount, HttpServerRequest request, UserNextcloud.TokenProvider user, Vertx vertx, List<String> userStructures);
 
     /**
      * Copy all the files listed in the filesPath from nextcloud to local.
@@ -199,5 +245,16 @@ public interface DocumentsService {
      * @return              Future JsonObject with the status of the creation
      */
     Future<JsonObject> createFolderNextcloud(String host, UserNextcloud.TokenProvider userSession, String path);
+
+    /**
+     * Create a new blank office document (docx/xlsx/pptx) in the Nextcloud space, from a template
+     * @param host host
+     * @param userSession   User session
+     * @param type          File extension (docx, xlsx or pptx)
+     * @param name          File name without extension
+     * @param path          Path of the destination folder in Nextcloud
+     * @return              Future JsonObject with the created document's name and path
+     */
+    Future<JsonObject> createDocumentFromTemplate(String host, UserNextcloud.TokenProvider userSession, String type, String name, String path);
 
 }

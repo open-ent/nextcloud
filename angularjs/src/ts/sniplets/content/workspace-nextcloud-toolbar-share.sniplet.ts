@@ -2,8 +2,10 @@ import {model, notify, idiom as lang, SharePayload, template, workspace} from "e
 import {RootsConst} from "../../core/constants/roots.const";
 import {SyncDocument} from "../../models";
 import {WorkspaceEntcoreUtils} from "../../utils/workspace-entcore.utils";
+import {NextcloudDocumentsUtils} from "../../utils/nextcloud-documents.utils";
 import {nextcloudService} from "../../services";
 import {setTimeout} from "core-js";
+import {AxiosResponse} from "axios";
 import models = workspace.v2.models;
 
 interface IViewModel {
@@ -84,7 +86,8 @@ export class ToolbarShareSnipletViewModel implements IViewModel {
     async onCancelShareElements(): Promise<void> {
         if (this.sharedElement.length) {
             try {
-                await nextcloudService.moveDocumentWorkspaceToCloud(model.me.userId, this.sharedElement.map(doc => doc._id), this.vm.parentDocument.path);
+                const res: AxiosResponse = await nextcloudService.moveDocumentWorkspaceToCloud(model.me.userId, this.sharedElement.map(doc => doc._id), this.vm.parentDocument.path);
+                NextcloudDocumentsUtils.notifyForbiddenExtensions(res);
                 this.vm.updateTree();
                 this.vm.safeApply();
             } catch (e) {

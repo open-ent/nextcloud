@@ -1,4 +1,4 @@
-import {FolderTreeProps, angular, template, Behaviours, workspace, model, idiom as lang, Document, init} from "entcore";
+import {FolderTreeProps, angular, template, Behaviours, workspace, model, idiom as lang, notify, Document, init} from "entcore";
 import {Tree} from "entcore/types/src/ts/workspace/model";
 import {safeApply} from "../utils/safe-apply.utils";
 import {RootsConst} from "../core/constants/roots.const";
@@ -82,6 +82,8 @@ class ViewModel implements IViewModel {
                 this.documents = [new SyncDocument().initParent()];
                 this.initTree(this.documents);
                 this.initDraggable();
+                // Déplié par défaut : même appel que switchWorkspaceTreeHandler au changement d'onglet.
+                this.folderTree.openFolder(this.documents[0]);
                 safeApply(this.scope);
             })
             .catch((err: AxiosError) => {
@@ -181,7 +183,11 @@ class ViewModel implements IViewModel {
                     let documentToUpdate: Set<string> = new Set(selectedDocuments.filter((file: Document) => file.selected).map((file: Document) => file._id));
                     documentToUpdate.add(document._id);
                     nextcloudService.moveDocumentWorkspaceToCloud(model.me.userId, Array.from(documentToUpdate), syncedDocument.path)
-                        .then((_: AxiosResponse) => {
+                        .then((res: AxiosResponse) => {
+                            // Le déplacement est un 200 global même si certains fichiers échouent
+                            // individuellement (tableau data[].status==="ko") : sans cette
+                            // vérification, une extension bloquée passait inaperçue côté UI.
+                            NextcloudDocumentsUtils.notifyForbiddenExtensions(res);
                             WorkspaceEntcoreUtils.updateWorkspaceDocuments(
                                     WorkspaceEntcoreUtils.workspaceScope()['openedFolder']['folder']);
                             Behaviours.applicationsBehaviours[NEXTCLOUD_APP].nextcloudService.sendOpenFolderDocument(angular.element(event.target).scope().folder);

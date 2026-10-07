@@ -1,9 +1,8 @@
 import { FC, useEffect, useRef, useState } from "react";
 
-import CloseIcon from "@mui/icons-material/Close";
-import { Box, IconButton, Tooltip, Typography } from "@mui/material";
+import { Box, Checkbox, Tooltip, Typography } from "@mui/material";
 
-import { chipStyle, closeStyle } from "./style";
+import { chipStyle } from "./style";
 import { useGlobalProvider } from "~/providers/GlobalProvider";
 import { flexStartBoxStyle } from "~/styles/boxStyles";
 
@@ -20,6 +19,10 @@ export const DeletableChip: FC<{ extension: string }> = ({ extension }) => {
     }
   }, [extension]);
 
+  // Coché = extension bloquée (présente dans excludedExtensions). Décocher la retire de la
+  // liste (donc elle redevient autorisée) — même effet que l'ancien bouton de suppression,
+  // mais une case à cocher rend plus explicite qu'on "laisse passer" un défaut préconfiguré
+  // plutôt qu'on "supprime" une règle de sécurité.
   return (
     <Box
       sx={{
@@ -29,14 +32,15 @@ export const DeletableChip: FC<{ extension: string }> = ({ extension }) => {
         marginRight: "2rem",
       }}
     >
+      <Checkbox
+        checked={true}
+        onChange={() => handleRemoveExcludedExtension(extension)}
+      />
       <Tooltip title={isEllipsis ? extension : ""} followCursor={true}>
         <Typography variant="body1" sx={chipStyle} ref={textRef}>
           {extension}
         </Typography>
       </Tooltip>
-      <IconButton onClick={() => handleRemoveExcludedExtension(extension)}>
-        <CloseIcon sx={closeStyle} />
-      </IconButton>
     </Box>
   );
 };

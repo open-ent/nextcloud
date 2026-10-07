@@ -1,5 +1,5 @@
 import { AxiosError, AxiosResponse } from "axios";
-import { angular, Behaviours, idiom as lang, Me, model, template, workspace } from "entcore";
+import { angular, Behaviours, idiom as lang, Me, model, template, toasts, workspace } from "entcore";
 import { Subscription } from "rxjs";
 import { RootsConst } from "../../core/constants/roots.const";
 import { ViewMode } from "../../core/enums/view-mode";
@@ -10,6 +10,7 @@ import { NextcloudPreference, Preference } from "../../shared/services";
 import { safeApply } from "../../utils/safe-apply.utils";
 import { ToolbarSnipletViewModel } from "./workspace-nextcloud-toolbar.sniplet";
 import { UploadFileSnipletViewModel } from "./workspace-nextcloud-upload-file.sniplet";
+import { CreateDocumentSnipletViewModel } from "./workspace-nextcloud-create-document.sniplet";
 import { NextcloudViewIcons } from "./workspace-nextcloud-view-icons.sniplet";
 import { NextcloudViewList } from "./workspace-nextcloud-view-list.sniplet";
 import models = workspace.v2.models;
@@ -30,6 +31,8 @@ interface IViewModel {
     onOpenContent(document: SyncDocument): void;
 
     getFile(document: SyncDocument): string;
+
+    getPreviewUrl(document: SyncDocument): string;
 
     nextcloudUrl: string;
     isNextcloudUrlHidden: boolean;
@@ -333,8 +336,17 @@ class ViewModel implements IViewModel {
             this.selectedDocuments = [];
         } else {
             if (document.editable) {
-                nextcloudService.openNextcloudLink(document, this.nextcloudUrl);
+                // Fichier bureautique (doc/xls/ppt) : ouvrir l'éditeur en ligne (OnlyOffice via l'API Direct
+                // Editing du cœur) via une URL à token fabriquée par le connecteur avec le token per-user —
+                // sans login. Le PDF n'est PAS éditable via cette API (Nextcloud renvoie 403), cf isEditable().
+                nextcloudService.getEditUrl(model.me.userId, document.path)
+                    .then((url: string) => window.open(url))
+                    .catch((err: AxiosError) => {
+                        toasts.warning('nextcloud.edit.error');
+                        console.error('[Nextcloud@onOpenContent] Failed to open online editor: ', err);
+                    });
             } else {
+                // inline=true : le navigateur affiche le fichier (PDF, image...) au lieu de le télécharger.
                 window.open(this.getFile(document));
             }
 
@@ -342,7 +354,11 @@ class ViewModel implements IViewModel {
     }
 
     getFile(document: SyncDocument): string {
-        return this.nextcloudService.getFile(model.me.userId, document.name, document.path, document.contentType);
+        return this.nextcloudService.getFile(model.me.userId, document.name, document.path, document.contentType, false, true);
+    }
+
+    getPreviewUrl(document: SyncDocument): string {
+        return this.nextcloudService.getPreviewUrl(model.me.userId, document.fileId);
     }
 
     isDropzoneEnabled(): boolean {
@@ -365,9 +381,13 @@ export const workspaceNextcloudContent = {
     controller: {
         init: async function (): Promise<void> {
             lang.addBundle('/nextcloud/i18n', () => {
+                // exposé sur le scope (comme les contrôleurs core auth) pour permettre
+                // [[lang.translate('...')]] dans les templates imbriqués, ex. un placeholder traduit
+                this.lang = lang;
                 this.vm = new ViewModel(this, nextcloudService);
                 this.vm.toolbar = new ToolbarSnipletViewModel(this);
                 this.vm.upload = new UploadFileSnipletViewModel(this);
+                this.vm.create = new CreateDocumentSnipletViewModel(this);
                 this.vm.viewList = new NextcloudViewList(this);
                 this.vm.viewIcons = new NextcloudViewIcons(this);
             });

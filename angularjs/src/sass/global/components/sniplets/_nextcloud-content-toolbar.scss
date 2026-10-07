@@ -35,6 +35,36 @@
     }
   }
 
+  .nextcloud-share-user-picker {
+    .nextcloud-share-user-search-input {
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .nextcloud-share-user-results {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid $light-grey;
+
+      li {
+        padding: 8px 12px;
+        cursor: pointer;
+        &:hover {
+          background: $light-grey;
+        }
+      }
+    }
+
+    .nextcloud-share-user-selected {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+  }
+
   share-panel {
     button {
       @include size-button();

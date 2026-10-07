@@ -5,6 +5,7 @@ import fr.openent.nextcloud.core.constants.Field;
 import fr.openent.nextcloud.helper.Attachment;
 import fr.openent.nextcloud.helper.Metadata;
 import fr.openent.nextcloud.helper.StringHelper;
+import fr.openent.nextcloud.model.UserNextcloud;
 import fr.openent.nextcloud.security.OwnerFilter;
 import fr.openent.nextcloud.service.DocumentsService;
 import fr.openent.nextcloud.service.ServiceFactory;
@@ -13,6 +14,7 @@ import fr.wseduc.rs.*;
 import fr.wseduc.security.ActionType;
 import fr.wseduc.security.SecuredAction;
 import fr.wseduc.webutils.http.Renders;
+import fr.wseduc.webutils.request.RequestUtils;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.http.HttpServerRequest;
@@ -27,6 +29,7 @@ import org.entcore.common.storage.Storage;
 import org.entcore.common.user.UserUtils;
 import org.entcore.common.utils.StringUtils;
 
+import java.util.Arrays;
 import java.util.List;
 
 public class DocumentsController extends ControllerHelper {
@@ -37,6 +40,9 @@ public class DocumentsController extends ControllerHelper {
     private final EventHelper eventHelper;
     public static final String RESOURCE_DOC = "document";
     public static final String RESOURCE_FOLDER = "folder";
+    // Whitelist stricte : "type" sert à construire un chemin de fichier template côté serveur
+    // (template.<type>), ne jamais l'accepter tel quel sans validation.
+    private static final List<String> ALLOWED_DOCUMENT_TYPES = Arrays.asList("docx", "xlsx", "pptx");
     private final EventBus eventBus;
 
     public DocumentsController(ServiceFactory serviceFactory) {
@@ -58,11 +64,36 @@ public class DocumentsController extends ControllerHelper {
         final String path = request.getParam(Field.PATH);
         UserUtils.getUserInfos(eb, request, user ->
                 userService.getUserSession(user.getUserId())
-                        .compose(userSession -> documentsService.listFiles(Renders.getHost(request), userSession, path))
+                        .compose(userSession -> {
+                            // Premier accès à la racine de l'espace synchronisé : on s'assure que le
+                            // dossier propre à l'établissement de l'utilisateur existe déjà côté
+                            // Nextcloud (best-effort, ne bloque jamais l'affichage de la liste).
+                            if (StringUtils.isEmpty(path)) {
+                                documentsService.ensureSyncFolderExists(Renders.getHost(request), userSession, user.getStructures());
+                            }
+                            return documentsService.listFiles(Renders.getHost(request), userSession, path);
+                        })
                         .onSuccess(files -> {
                             renderJson(request, new JsonObject().put(Field.DATA, files));
                             if (StringUtils.isEmpty(path)) eventHelper.onAccess(request);
                         })
+                        .onFailure(err -> renderError(request)));
+    }
+
+    @Get("/files/user/:userid/edit")
+    @ApiDoc("API to get an online office-editing URL (Collabora/OnlyOffice) for a file, brokered with the per-user token")
+    @SecuredAction(value = "", type = ActionType.RESOURCE)
+    @ResourceFilter(OwnerFilter.class)
+    public void getEditUrl(HttpServerRequest request) {
+        final String path = request.getParam(Field.PATH);
+        if (StringUtils.isEmpty(path)) {
+            badRequest(request, "nextcloud.edit.path.missing");
+            return;
+        }
+        UserUtils.getUserInfos(eb, request, user ->
+                userService.getUserSession(user.getUserId())
+                        .compose(userSession -> documentsService.getEditUrl(Renders.getHost(request), userSession, path))
+                        .onSuccess(res -> renderJson(request, res))
                         .onFailure(err -> renderError(request)));
     }
 
@@ -75,6 +106,7 @@ public class DocumentsController extends ControllerHelper {
         String path = request.getParam(Field.PATH);
         String contentType = request.getParam(Field.CONTENTTYPE);
         boolean isFolder = Boolean.parseBoolean(request.getParam(Field.ISFOLDER));
+        boolean inline = Boolean.parseBoolean(request.getParam(Field.INLINE));
         UserUtils.getUserInfos(eb, request, user ->
                 userService.getUserSession(user.getUserId())
                         .compose(userSession -> {
@@ -92,12 +124,77 @@ public class DocumentsController extends ControllerHelper {
                                         .putHeader("Content-Description", "File Transfer")
                                         .putHeader("Content-Transfer-Encoding", "binary");
                             } else {
+                                // inline : le navigateur affiche le fichier (PDF, image...) au lieu de le
+                                // télécharger — utilisé par le clic "ouvrir" sur un document non éditable,
+                                // par opposition au bouton "Télécharger" qui veut toujours "attachment".
+                                String disposition = (inline ? "inline" : "attachment") + "; filename=" + fileName;
                                 resp.putHeader("Content-type", contentType + "; charset=utf-8")
-                                        .putHeader("Content-Disposition", "attachment; filename=" + fileName);
+                                        .putHeader("Content-Disposition", disposition);
                             }
                             resp.end(fileResponse.body());
                         })
                         .onFailure(err -> renderError(request)));
+    }
+
+    @Get("/files/user/:userid/file/:fileId/preview")
+    @ApiDoc("API to get a preview/thumbnail of a file (image, pdf, video…) generated by NextCloud")
+    @SecuredAction(value = "", type = ActionType.RESOURCE)
+    @ResourceFilter(OwnerFilter.class)
+    public void getPreview(HttpServerRequest request) {
+        String fileId = request.getParam(Field.FILEID);
+        if (StringUtils.isEmpty(fileId)) {
+            badRequest(request, "nextcloud.preview.fileid.missing");
+            return;
+        }
+        int width = parsePreviewDimension(request.getParam(Field.WIDTH), 150);
+        int height = parsePreviewDimension(request.getParam(Field.HEIGHT), 150);
+        UserUtils.getUserInfos(eb, request, user ->
+                userService.getUserSession(user.getUserId())
+                        .compose(userSession -> documentsService.getPreview(Renders.getHost(request), userSession, Long.valueOf(fileId), width, height))
+                        .onSuccess(previewResponse -> request.response()
+                                .putHeader("Content-Type", "image/png")
+                                .putHeader("Content-Disposition", "inline")
+                                .putHeader("Cache-Control", "private, max-age=86400")
+                                .end(previewResponse.body()))
+                        .onFailure(err -> renderError(request)));
+    }
+
+    private int parsePreviewDimension(String rawValue, int defaultValue) {
+        try {
+            return StringUtils.isEmpty(rawValue) ? defaultValue : Integer.parseInt(rawValue);
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+
+    @Post("/files/user/:userid/share")
+    @ApiDoc("API to share a NextCloud file/folder with another ENT user (native NextCloud sharing, enabling " +
+            "real-time coproduction via OnlyOffice once both users open it)")
+    @SecuredAction(value = "", type = ActionType.RESOURCE)
+    @ResourceFilter(OwnerFilter.class)
+    public void shareWithUser(HttpServerRequest request) {
+        RequestUtils.bodyToJson(request, body -> {
+            String path = body.getString(Field.PATH);
+            String targetUserId = body.getString(Field.TARGETUSERID);
+            String targetDisplayName = body.getString(Field.TARGETDISPLAYNAME);
+            int permissions = body.getInteger(Field.PERMISSIONS, 3); // défaut : lecture + écriture
+            if (StringUtils.isEmpty(path) || StringUtils.isEmpty(targetUserId) || StringUtils.isEmpty(targetDisplayName)) {
+                badRequest(request, "nextcloud.share.parameters.missing");
+                return;
+            }
+            UserUtils.getUserInfos(eb, request, user -> {
+                UserNextcloud.RequestBody targetUserBody = new UserNextcloud.RequestBody()
+                        .setUserId(targetUserId)
+                        .setDisplayName(targetDisplayName);
+                // S'assure que le destinataire a bien un compte NextCloud (NextCloud refuse un partage
+                // vers un compte inexistant) avant de créer le partage avec le token du propriétaire.
+                userService.provideUserSession(Renders.getHost(request), targetUserBody)
+                        .compose(v -> userService.getUserSession(user.getUserId()))
+                        .compose(userSession -> documentsService.shareWithUser(Renders.getHost(request), userSession, path, targetUserId, permissions))
+                        .onSuccess(res -> renderJson(request, res))
+                        .onFailure(err -> renderError(request, new JsonObject().put(Field.ERROR, err.getMessage())));
+            });
+        });
     }
 
     @Get("/files/user/:userid/multiple/download")
@@ -237,14 +334,24 @@ public class DocumentsController extends ControllerHelper {
                 userService.getUserSession(user.getUserId())
                         .compose(userSession -> {
                             request.resume();
-                            return documentsService.uploadStreamedMultipleFiles(Field.FILECOUNT, request, userSession, vertx);
+                            return documentsService.uploadStreamedMultipleFiles(Field.FILECOUNT, request, userSession, vertx, user.getStructures());
                         })
                         .onSuccess(res -> {
                             renderJson(request, res);
                             eventHelper.onCreateResource(request, RESOURCE_DOC);
                         })
-                        .onFailure(err -> renderError(request, new JsonObject().put(Field.ERROR, err.getMessage()))));
+                        .onFailure(err -> renderExtensionOrGenericError(request, err)));
 
+    }
+
+    // "extension.forbidden" doit être distinguable côté front pour afficher un message clair
+    // à l'utilisateur (cf. DefaultDocumentsService#checkExtensionAllowed), pas juste une 500.
+    private void renderExtensionOrGenericError(HttpServerRequest request, Throwable err) {
+        if ("extension.forbidden".equals(err.getMessage())) {
+            Renders.renderJson(request, new JsonObject().put(Field.ERROR, "extension.forbidden"), 403);
+        } else {
+            renderError(request, new JsonObject().put(Field.ERROR, err.getMessage()));
+        }
     }
 
     @Put("/files/user/:userid/move/workspace")
@@ -335,6 +442,28 @@ public class DocumentsController extends ControllerHelper {
                             .onFailure(err -> renderError(request, new JsonObject().put(Field.ERROR, err.getMessage()))));
         else
             badRequest(request);
+    }
+
+    @Post("/files/user/:userid/create/document")
+    @ApiDoc("Create a blank office document (docx/xlsx/pptx) from a template in Nextcloud")
+    @SecuredAction(value = "", type = ActionType.RESOURCE)
+    @ResourceFilter(OwnerFilter.class)
+    public void createNewDocument(HttpServerRequest request) {
+        String type = request.params().get(Field.TYPE);
+        String name = request.params().get(Field.NAME);
+        String path = request.params().get(Field.PATH);
+        if (StringUtils.isEmpty(type) || StringUtils.isEmpty(name) || !ALLOWED_DOCUMENT_TYPES.contains(type)) {
+            badRequest(request);
+            return;
+        }
+        UserUtils.getUserInfos(eb, request, user ->
+                userService.getUserSession(user.getUserId())
+                        .compose(userSession -> documentsService.createDocumentFromTemplate(Renders.getHost(request), userSession, type, name, path))
+                        .onSuccess(res -> {
+                            renderJson(request, res);
+                            eventHelper.onCreateResource(request, RESOURCE_DOC);
+                        })
+                        .onFailure(err -> renderError(request, new JsonObject().put(Field.ERROR, err.getMessage()))));
     }
 
     private void initializeEventBusConsumers() {

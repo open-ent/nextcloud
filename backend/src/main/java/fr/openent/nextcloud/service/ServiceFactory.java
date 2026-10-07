@@ -74,4 +74,8 @@ public class ServiceFactory {
     public MongoDb mongoDb() {
         return this.mongoDb;
     }
+
+    public Neo4j neo4j() {
+        return this.neo4j;
+    }
 }

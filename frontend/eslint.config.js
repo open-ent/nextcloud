@@ -1,3 +1,5 @@
+import { fileURLToPath } from "node:url";
+import { dirname } from "node:path";
 import js from "@eslint/js";
 import importPlugin from "eslint-plugin-import";
 import reactPlugin from "eslint-plugin-react";
@@ -5,6 +7,10 @@ import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import globals from "globals";
 import tseslint from "typescript-eslint";
+
+// tsconfigRootDir doit être un chemin absolu (import.meta.dirname n'existe qu'à partir de
+// Node 20.11/21.2 ; la CI tourne encore sous Node 18) -> le calculer nous-mêmes.
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default [
   { ignores: ["dist", "node_modules", "coverage", "prettier.config.cjs", "scripts"] },
@@ -24,7 +30,7 @@ export default [
           jsx: true,
         },
         projectService: true,
-        tsconfigRootDir: ".",
+        tsconfigRootDir: __dirname,
       },
     },
     plugins: {

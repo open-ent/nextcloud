@@ -3,6 +3,7 @@ import {model, toasts} from "entcore";
 import {AxiosError} from "axios";
 import {safeApply} from "../../utils/safe-apply.utils";
 import {ToolbarShareSnipletViewModel} from "./workspace-nextcloud-toolbar-share.sniplet";
+import {ToolbarShareNextcloudSnipletViewModel} from "./workspace-nextcloud-toolbar-share-nextcloud.sniplet";
 import {nextcloudService} from "../../services";
 
 declare let window: any;
@@ -11,6 +12,7 @@ interface ILightboxViewModel {
     properties: boolean;
     delete: boolean;
     share: boolean;
+    shareNextcloud: boolean;
 }
 
 interface IViewModel {
@@ -34,6 +36,9 @@ interface IViewModel {
 
     // share documents action (using class sniplet)
     share: any;
+
+    // native NextCloud share action (using class sniplet)
+    shareNextcloud: any;
 }
 
 export class ToolbarSnipletViewModel implements IViewModel {
@@ -46,16 +51,21 @@ export class ToolbarSnipletViewModel implements IViewModel {
     // share documents action
     share: any;
 
+    // native NextCloud share action
+    shareNextcloud: any;
+
     constructor(scope) {
         this.scope = scope;
         this.vm = scope.vm;
         this.lightbox = {
             properties: false,
             delete: false,
-            share: false
+            share: false,
+            shareNextcloud: false
         };
         this.currentDocument = null;
         this.share = new ToolbarShareSnipletViewModel(this);
+        this.shareNextcloud = new ToolbarShareNextcloudSnipletViewModel(this);
     }
     isSelectedEditable(selectedDocuments: Array<SyncDocument>): boolean {
         return selectedDocuments.length > 0 && selectedDocuments[0].editable;
@@ -68,7 +78,15 @@ export class ToolbarSnipletViewModel implements IViewModel {
 
     toggleEdit(): void {
         if (this.vm.selectedDocuments.length > 0) {
-            nextcloudService.openNextcloudLink(this.vm.selectedDocuments[0], this.vm.nextcloudUrl);
+            const document: SyncDocument = this.vm.selectedDocuments[0];
+            // Édition bureautique en ligne : le connecteur fabrique une URL d'édition à token
+            // (OnlyOffice via l'API Direct Editing du cœur) avec le token per-user — pas de connexion NextCloud.
+            nextcloudService.getEditUrl(model.me.userId, document.path)
+                .then((url: string) => window.open(url))
+                .catch((err: AxiosError) => {
+                    toasts.warning('nextcloud.edit.error');
+                    console.error('[Nextcloud@ToolbarSnipletViewModel::toggleEdit] Failed to open online editor: ', err);
+                });
         }
     }
 

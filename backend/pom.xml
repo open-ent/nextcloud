@@ -5,13 +5,13 @@
     <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>io.edifice</groupId>
+    <groupId>fr.openent</groupId>
     <artifactId>app-parent</artifactId>
     <version>1.2.1</version>
   </parent>
   <groupId>fr.openent</groupId>
   <artifactId>nextcloud</artifactId>
-  <version>2.4.3</version>
+  <version>2.4.2-patched</version>
   <scm>
     <connection>scm:git:https://github.com/OPEN-ENT-NG/nextcloud.git</connection>
     <developerConnection>scm:git:https://github.com/OPEN-ENT-NG/nextcloud.git</developerConnection>
@@ -23,6 +23,11 @@
       <name>ODE Repository</name>
       <url>https://maven.opendigitaleducation.com/nexus/content/groups/public</url>
     </repository>
+    <repository>
+      <id>pt-releases</id>
+      <name>rct-nexus maven-releases (entcore-libs patchées)</name>
+      <url>https://rct-nexus.tech.fr/repository/maven-releases/</url>
+    </repository>
   </repositories>
   <properties>
     <toolsVersion>2.0.0-final</toolsVersion>
@@ -30,11 +35,11 @@
     <vertxCronTimerVersion>3.0.0</vertxCronTimerVersion>
     <powerMockVersion>2.0.2</powerMockVersion>
     <mockitoVersion>2.28.2</mockitoVersion>
-    <entCoreVersion>6.16.11</entCoreVersion>
+    <entCoreVersion>6.16.14-patched</entCoreVersion>
     <modMongoVersion>4.2.0</modMongoVersion>
     <modPostgresVersion>2.2.1</modPostgresVersion>
     <modJsonSchemaValidatorVersion>2.2.0</modJsonSchemaValidatorVersion>
-    <entCoreLibsVersion>6.16.4</entCoreLibsVersion>
+    <entCoreLibsVersion>6.16.8-patched</entCoreLibsVersion>
   </properties>
   <dependencies>
     <dependency>
@@ -83,12 +88,6 @@
       <groupId>org.powermock</groupId>
       <artifactId>powermock-module-testng</artifactId>
       <version>${powerMockVersion}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.entcore</groupId>
-      <artifactId>tests</artifactId>
-      <version>${entCoreVersion}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -144,4 +143,18 @@
       <classifier>fat</classifier>
     </dependency>
   </dependencies>
+  <profiles>
+    <profile>
+      <!-- org.entcore:tests ne sert qu'aux scénarios Gatling et n'est pas publié en -patched -->
+      <id>gatling-it</id>
+      <dependencies>
+        <dependency>
+          <groupId>org.entcore</groupId>
+          <artifactId>tests</artifactId>
+          <version>${entCoreVersion}</version>
+          <scope>test</scope>
+        </dependency>
+      </dependencies>
+    </profile>
+  </profiles>
 </project>

@@ -1,8 +1,24 @@
 import {SyncDocument} from "../models";
-import {model} from "entcore";
+import {model, idiom as lang, notify} from "entcore";
+import {AxiosResponse} from "axios";
 import {DocumentRole} from "../core/enums/document-role";
 
 export class NextcloudDocumentsUtils {
+    /**
+     * Le déplacement/copie vers Nextcloud répond toujours 200, même si certains fichiers sont
+     * refusés individuellement (data[].status === "ko"). Sans cette vérification, une extension
+     * bloquée par l'établissement passait inaperçue côté utilisateur (l'action semblait réussie).
+     */
+    static notifyForbiddenExtensions(res: AxiosResponse): void {
+        const data: Array<any> = res && res.data && res.data.data;
+        if (!data || !Array.isArray(data)) {
+            return;
+        }
+        const hasForbiddenExtension: boolean = data.some((item: any) => item.status === "ko" && item.error === "extension.forbidden");
+        if (hasForbiddenExtension) {
+            notify.error(lang.translate('nextcloud.fail.upload.extension.forbidden'));
+        }
+    }
     static determineRole(contentType: string): DocumentRole {
         for (let role in DocumentRole) {
             if (contentType.includes(DocumentRole[role])) {

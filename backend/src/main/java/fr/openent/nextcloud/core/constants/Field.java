@@ -1,5 +1,8 @@
 package fr.openent.nextcloud.core.constants;
 
+import java.util.Arrays;
+import java.util.List;
+
 public class Field {
 
     public static final String DATA = "data";
@@ -14,6 +17,7 @@ public class Field {
     public static final String YES = "yes";
     public static final String ETYPE = "eType";
     public static final String FOLDER = "folder";
+    public static final String TYPE = "type";
     public static final String ARCHIVE = "archive";
     public static final String DISPLAYNAMECAMEL = "displayName";
     public static final String EMAIL = "email";
@@ -87,6 +91,7 @@ public class Field {
 
 
     public static final String ISFOLDER = "isFolder";
+    public static final String INLINE = "inline";
 
     // Config
     public static final String ADMINCREDENTIAL = "admin-credential";
@@ -139,6 +144,10 @@ public class Field {
     public static final String SIZE = "size";
     public static final String CONTENTLENGTH = "contentLength";
     public static final String HASPREVIEW = "hasPreview";
+    public static final String WIDTH = "width";
+    public static final String HEIGHT = "height";
+    public static final String TARGETUSERID = "targetUserId";
+    public static final String TARGETDISPLAYNAME = "targetDisplayName";
     public static final String FAVORITE = "favorite";
     public static final String COMMENTSUNREAD = "commentsUnread";
     public static final String OWNERDISPLAYNAME = "ownerDisplayName";
@@ -155,6 +164,35 @@ public class Field {
     public static final String SYNCFOLDER = "syncFolder";
     public static final String EXCLUDEDEXTENSIONS = "excludedExtensions";
     public static final String STAT_COLLECTION = "nextcloud_stat";
+    // Extensions exécutables/scripts couramment bloquées par défaut par les messageries et
+    // réseaux sociaux (WhatsApp, Gmail...) pour raison de sécurité (malware/phishing).
+    public static final List<String> DEFAULT_EXCLUDED_EXTENSIONS = Arrays.asList(
+            "exe", "bat", "cmd", "com", "cpl", "msi", "msp", "scr", "vbs", "vbe",
+            "js", "jse", "wsf", "wsh", "ps1", "jar", "apk", "lnk", "dll", "sys", "iso", "hta"
+    );
+    // Le réglage national "syncFolder" est un PRÉFIXE (le super-admin peut le changer) : au
+    // niveau d'un établissement, on propose par défaut ce préfixe suivi de son UAI (ou, à
+    // défaut d'UAI — ex. une académie —, son nom en majuscules avec underscores). L'admin
+    // local peut ensuite éditer librement la valeur complète proposée.
+    public static final String DEFAULT_SYNC_FOLDER_PREFIX = "ENT_PARTAGE_UAI_";
+    // Vitesse par défaut proposée (Ko/s) tant qu'aucun admin n'a réglé la bande passante :
+    // 10 Mo/s, une valeur raisonnable pour un réseau d'établissement, pas une limite technique.
+    public static final int DEFAULT_BANDWIDTH_LIMIT = 10000;
+    // Config par établissement (surcharge locale) : même collection CONFIG, _id = structureId
+    // au lieu de UNIQUEID. Précédence de résolution : local (école) > national (super-admin) >
+    // valeurs par défaut ci-dessus.
+    public static final String STRUCTUREID_PARAM = "structureid";
+
+    // partage inter-établissements (structures autorisées)
+    public static final String SHARE_STRUCTURES_COLLECTION = "nextcloud_share_structures";
+    public static final String STRUCTUREID = "structureId";
+    public static final String TARGETSTRUCTUREID = "targetStructureId";
+    public static final String CREATEDBY = "createdBy";
+    public static final String CREATED = "created";
+    public static final String QUERY = "query";
+    public static final String PROFILE = "profile";
+    public static final String UAI = "UAI";
+    public static final String TARGETUAI = "targetUai";
 
     private Field() {
         throw new IllegalStateException("Utility class");

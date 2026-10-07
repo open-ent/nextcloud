@@ -1,0 +1,52 @@
+<div class="horizontal-spacing-twice nextcloud-share-user-picker">
+    <h2 translate content="nextcloud.share.native.title"></h2>
+
+    <div class="row">
+        <input type="text"
+               class="nextcloud-share-user-search-input"
+               ng-model="vm.toolbar.shareNextcloud.searchQuery"
+               ng-change="vm.toolbar.shareNextcloud.onSearchQueryChange()"
+               ng-disabled="vm.toolbar.shareNextcloud.sharing"
+               placeholder="[[lang.translate('nextcloud.share.native.search.placeholder')]]" />
+    </div>
+
+    <div class="row" ng-if="vm.toolbar.shareNextcloud.searching">
+        <i class="loading"></i>
+    </div>
+
+    <ul class="nextcloud-share-user-results"
+        ng-if="!vm.toolbar.shareNextcloud.searching && vm.toolbar.shareNextcloud.searchResults.length > 0">
+        <li ng-repeat="user in vm.toolbar.shareNextcloud.searchResults"
+            ng-click="vm.toolbar.shareNextcloud.selectUser(user)">
+            [[user.displayName]]
+        </li>
+    </ul>
+
+    <div class="row"
+         ng-if="!vm.toolbar.shareNextcloud.searching
+                && vm.toolbar.shareNextcloud.searchQuery.length >= 3
+                && vm.toolbar.shareNextcloud.searchResults.length === 0
+                && !vm.toolbar.shareNextcloud.selectedUser">
+        <span translate content="nextcloud.share.native.empty"></span>
+    </div>
+
+    <div class="row nextcloud-share-user-selected" ng-if="vm.toolbar.shareNextcloud.selectedUser">
+        <span translate content="nextcloud.share.native.selected"></span>&nbsp;<strong>[[vm.toolbar.shareNextcloud.selectedUser.displayName]]</strong>
+        <button class="nextcloud-button-cancel" ng-click="vm.toolbar.shareNextcloud.resetSelectedUser()">
+            <i18n>nextcloud.share.native.change</i18n>
+        </button>
+    </div>
+
+    <div class="lightbox-buttons fluid">
+        <button class="nextcloud-button-confirm right-magnet"
+                ng-disabled="!vm.toolbar.shareNextcloud.selectedUser || vm.toolbar.shareNextcloud.sharing"
+                ng-click="vm.toolbar.shareNextcloud.onConfirmShareNextcloud()">
+            <i18n>nextcloud.share.native.confirm</i18n>
+        </button>
+        <button class="nextcloud-button-cancel right-magnet"
+                ng-disabled="vm.toolbar.shareNextcloud.sharing"
+                ng-click="vm.toolbar.shareNextcloud.onCancelShareNextcloud()">
+            <i18n>nextcloud.share.native.cancel</i18n>
+        </button>
+    </div>
+</div>

@@ -5,7 +5,38 @@
             <i18n>nextcloud.url.connect</i18n> &#58; <a target="_blank" ng-href="[[vm.nextcloudUrl]]">[[vm.nextcloudUrl]]</a>
         </div>
 
-        <!-- view mode -->
+        <!-- action : importer des fichiers dans NextCloud (bouton persistant, en plus de la
+             dropzone), aligné à droite. Affiché seulement si droit d'écriture sur le dossier.
+             On ouvre le sélecteur de fichiers NATIF (input caché) puis on délègue à
+             onImportFiles() — le même traitement que le glisser-déposer. L'ancien
+             toggleUploadFilesView(true) ouvrait le popup d'upload VIDE (sans sélecteur)
+             d'où le « popup blanc ». Pattern angular.element(this).scope() déjà utilisé
+             ailleurs dans le connecteur (debugInfo actif). -->
+        <div class="cell right-magnet" ng-if="vm.canDropOnFolder()">
+            <!-- Même style que le bouton « Importer » natif du workspace (classe
+                 document-buttons-add + icône, cf view-src/workspace.html) : la CSS du
+                 workspace est chargée sur la page, donc le rendu est identique. -->
+            <button type="button" class="document-buttons-add" onclick="this.parentNode.querySelector('input[type=file]').click()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" aria-hidden="true"><g fill="currentColor" fill-rule="evenodd" clip-path="url(#icon-download-nc)" clip-rule="evenodd"><path d="M7.293 16.293a1 1 0 0 1 1.414 0L12 19.586l3.293-3.293a1 1 0 0 1 1.414 1.414l-4 4a1 1 0 0 1-1.414 0l-4-4a1 1 0 0 1 0-1.414"></path><path d="M12 11a1 1 0 0 1 1 1v9a1 1 0 1 1-2 0v-9a1 1 0 0 1 1-1"></path><path d="M8.668 1.994A9 9 0 0 1 17.48 8H18a6.002 6.002 0 0 1 5.689 7.919 6 6 0 0 1-2.234 2.989 1 1 0 1 1-1.15-1.636A4 4 0 0 0 18 10H16.74a1 1 0 0 1-.969-.751A7 7 0 1 0 3.75 15.627a1 1 0 1 1-1.498 1.326A9 9 0 0 1 8.668 1.994"></path></g><defs><clipPath id="icon-download-nc"><path fill="#fff" d="M0 0h24v24H0z"></path></clipPath></defs></svg>
+                <span><i18n>import</i18n></span>
+            </button>
+            <input type="file" multiple style="display:none;"
+                   onchange="angular.element(this).scope().vm.upload.onImportFiles(this.files); angular.element(this).scope().$apply();" />
+        </div>
+
+        <!-- action : créer un document Office vierge (docx/xlsx/pptx) directement dans
+             NextCloud, à partir d'un template — même style que le bouton équivalent Lool
+             (« Créer un document ») du workspace natif (classe document-buttons-import). -->
+        <div class="cell right-magnet" ng-if="vm.canDropOnFolder()">
+            <button type="button" class="document-buttons-import" ng-click="vm.create.toggleCreateDocumentView(true)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M1 4a3 3 0 0 1 3-3h16a3 3 0 0 1 3 3v16a3 3 0 0 1-3 3H4a3 3 0 0 1-3-3zm3-1a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1zm1 9a1 1 0 0 1 1-1h5V6a1 1 0 1 1 2 0v5h5a1 1 0 1 1 0 2h-5v5a1 1 0 1 1-2 0v-5H6a1 1 0 0 1-1-1" clip-rule="evenodd"></path></svg>
+                <span><i18n>nextcloud.create.document.title</i18n></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- view mode : rangée séparée, sous le bouton Importer -->
+    <div class="row" style="margin-top: 12px;">
         <div class="cell right-magnet">
             <div class="choice-view">
                 <i class="show-icons" ng-class="{ selected: vm.isViewMode('icons') }" ng-click="vm.changeViewMode('icons')"></i>
@@ -43,5 +74,8 @@
 
     <!-- upload file popup -->
     <div ng-include="'/nextcloud/public/template/behaviours/sniplet-nextcloud-content/content/workspace-nextcloud-upload-file.html'"></div>
+
+    <!-- create document popup -->
+    <div ng-include="'/nextcloud/public/template/behaviours/sniplet-nextcloud-content/content/workspace-nextcloud-create-document.html'"></div>
 </div>
 

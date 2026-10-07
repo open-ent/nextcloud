@@ -49,6 +49,9 @@ public class DefaultDocumentsService implements DocumentsService {
     private final Storage storage;
     private final WorkspaceHelper workspaceHelper;
     private final EventBus eventBus;
+    private final fr.wseduc.mongodb.MongoDb mongoDb;
+    private final org.entcore.common.neo4j.Neo4j neo4j;
+    private final Vertx vertx;
 
     private static final String DOWNLOAD_ENDPOINT = "/index.php/apps/files/ajax/download.php";
 
@@ -59,6 +62,34 @@ public class DefaultDocumentsService implements DocumentsService {
         this.storage = serviceFactory.storage();
         this.workspaceHelper = serviceFactory.workspaceHelper();
         this.eventBus = serviceFactory.eventBus();
+        this.mongoDb = serviceFactory.mongoDb();
+        this.neo4j = serviceFactory.neo4j();
+        this.vertx = serviceFactory.vertx();
+    }
+
+    private static String extensionOf(String filename) {
+        int i = filename.lastIndexOf('.');
+        return i < 0 || i == filename.length() - 1 ? "" : filename.substring(i + 1).toLowerCase();
+    }
+
+    /**
+     * Rejette la promesse avec "extension.forbidden" si l'extension du fichier est exclue pour
+     * l'établissement de l'utilisateur (précédence local > national > défaut, cf.
+     * DesktopConfigHelper). userStructures peut être vide/null pour un utilisateur sans
+     * établissement : seul le réglage national s'applique alors.
+     * @return true si le fichier est autorisé (aucun rejet effectué)
+     */
+    private Future<Boolean> checkExtensionAllowed(String filename, List<String> userStructures) {
+        Promise<Boolean> promise = Promise.promise();
+        String extension = extensionOf(filename);
+        DesktopConfigHelper.getExcludedExtensions(mongoDb, userStructures).onSuccess(excluded -> {
+            if (excluded.contains(extension)) {
+                promise.fail("extension.forbidden");
+            } else {
+                promise.complete(true);
+            }
+        }).onFailure(promise::fail);
+        return promise.future();
     }
 
     /**
@@ -73,6 +104,46 @@ public class DefaultDocumentsService implements DocumentsService {
     public Future<JsonArray> listFiles(String host, UserNextcloud.TokenProvider userSession, String path) {
         Promise<JsonArray> promise = Promise.promise();
         parameterizedListFiles(host, userSession, path, responseAsync -> proceedListFiles(responseAsync, promise));
+        return promise.future();
+    }
+
+    /**
+     * Récupère une URL d'édition en ligne pour un fichier.
+     * S'appuie sur l'API « Direct Editing » du cœur de NextCloud
+     * ({@code POST /ocs/v2.php/apps/files/api/v1/directEditing/open}), authentifiée avec le token
+     * per-user du connecteur — donc sans session NextCloud côté utilisateur. L'URL renvoyée ouvre
+     * l'éditeur en s'appuyant sur le token, aucune connexion demandée.
+     * Pas de {@code editorId} imposé : NextCloud choisit automatiquement l'éditeur enregistré pour
+     * le type du fichier (Collabora ou OnlyOffice) — le choix se fait côté admin NextCloud
+     * (Applications), pas dans ce connecteur.
+     */
+    @Override
+    public Future<JsonObject> getEditUrl(String host, UserNextcloud.TokenProvider userSession, String path) {
+        Promise<JsonObject> promise = Promise.promise();
+        final NextcloudConfig nextcloudConfig = this.nextcloudConfigMapByHost.get(host);
+        final JsonObject body = new JsonObject()
+                .put("path", path.startsWith("/") ? path : "/" + path);
+        this.client.postAbs(nextcloudConfig.host() + "/ocs/v2.php/apps/files/api/v1/directEditing/open?format=json")
+                .basicAuthentication(userSession.userId(), userSession.token())
+                .putHeader("OCS-APIRequest", "true")
+                .as(BodyCodec.jsonObject())
+                .sendJsonObject(body, responseAsync -> {
+                    if (responseAsync.failed()) {
+                        log.error("[Nextcloud@DefaultDocumentsService::getEditUrl] Failed to open direct editing session: ", responseAsync.cause());
+                        promise.fail(responseAsync.cause().getMessage());
+                        return;
+                    }
+                    final JsonObject data = responseAsync.result().body()
+                            .getJsonObject("ocs", new JsonObject())
+                            .getJsonObject(Field.DATA, new JsonObject());
+                    final String url = data.getString("url");
+                    if (url == null || url.isEmpty()) {
+                        log.error("[Nextcloud@DefaultDocumentsService::getEditUrl] No edit url returned: " + responseAsync.result().body());
+                        promise.fail("nextcloud.edit.url.unavailable");
+                    } else {
+                        promise.complete(new JsonObject().put("url", url));
+                    }
+                });
         return promise.future();
     }
 
@@ -125,6 +196,57 @@ public class DefaultDocumentsService implements DocumentsService {
                 HttpResponseHelper.reject(log, messageToFormat, this.getClass().getSimpleName(), response, promise);
             }
         }
+    }
+
+    /**
+     * Crée automatiquement, côté serveur Nextcloud, le dossier synchronisé de l'utilisateur
+     * (nom résolu selon la précédence établissement > national > préfixe + UAI, cf.
+     * DesktopConfigHelper) s'il n'existe pas déjà. Appelé au premier accès à la racine de
+     * l'espace synchronisé (cf. DocumentsController#listFiles) ; best-effort, ne doit jamais
+     * faire échouer l'affichage de la liste si la création échoue.
+     */
+    @Override
+    public void ensureSyncFolderExists(String host, UserNextcloud.TokenProvider userSession, List<String> userStructures) {
+        String structureId = (userStructures != null && !userStructures.isEmpty()) ? userStructures.get(0) : null;
+        if (structureId == null) {
+            resolveAndCreateSyncFolder(host, userSession, userStructures, null, null);
+            return;
+        }
+
+        String cypher = "MATCH (s:Structure {id: {structureId}}) RETURN s.UAI as UAI, s.name as name LIMIT 1";
+        JsonObject params = new JsonObject().put("structureId", structureId);
+        neo4j.execute(cypher, params, org.entcore.common.neo4j.Neo4jResult.validResultHandler(event -> {
+            JsonArray results = event.isRight() ? event.right().getValue() : new JsonArray();
+            String uai = !results.isEmpty() ? results.getJsonObject(0).getString("UAI") : null;
+            String name = !results.isEmpty() ? results.getJsonObject(0).getString("name") : null;
+            resolveAndCreateSyncFolder(host, userSession, userStructures, uai, name);
+        }));
+    }
+
+    private void resolveAndCreateSyncFolder(String host, UserNextcloud.TokenProvider userSession,
+                                             List<String> userStructures, String uai, String name) {
+        DesktopConfigHelper.getSyncFolderName(mongoDb, userStructures, uai, name)
+                .onSuccess(folderName -> createFolderIfMissing(host, userSession, folderName))
+                .onFailure(err -> log.warn("[Nextcloud@ensureSyncFolderExists] Failed to resolve sync folder name: " + err.getMessage()));
+    }
+
+    private void createFolderIfMissing(String host, UserNextcloud.TokenProvider userSession, String path) {
+        final NextcloudConfig nextcloudConfig = this.nextcloudConfigMapByHost.get(host);
+        this.client.requestAbs(HttpMethod.MKCOL, nextcloudConfig.host() + nextcloudConfig.webdavEndpoint() + "/" +
+                        userSession.userId() + "/" + StringHelper.encodeUrlForNc(path))
+                .basicAuthentication(userSession.userId(), userSession.token())
+                .send(responseAsync -> {
+                    if (responseAsync.failed()) {
+                        log.warn("[Nextcloud@ensureSyncFolderExists] MKCOL request failed for " + path, responseAsync.cause());
+                        return;
+                    }
+                    int status = responseAsync.result().statusCode();
+                    // 201 : dossier créé. 405 : existe déjà (MKCOL sur une collection existante) — les
+                    // deux sont des issues normales, pas une erreur à signaler.
+                    if (status != 201 && status != 405) {
+                        log.warn("[Nextcloud@ensureSyncFolderExists] Unexpected status " + status + " creating " + path);
+                    }
+                });
     }
 
     /**
@@ -186,6 +308,51 @@ public class DefaultDocumentsService implements DocumentsService {
         final NextcloudConfig nextcloudConfig = this.nextcloudConfigMapByHost.get(host);
         this.client.getAbs(nextcloudConfig.host() + nextcloudConfig.webdavEndpoint() + "/" +
                         userSession.userId() + (path != null ? "/" + path : "" ))
+                .basicAuthentication(userSession.userId(), userSession.token())
+                .send(responseAsync -> proceedGetDocument(responseAsync, promise));
+        return promise.future();
+    }
+
+    @Override
+    public Future<JsonObject> shareWithUser(String host, UserNextcloud.TokenProvider userSession, String path, String targetUserId, int permissions) {
+        Promise<JsonObject> promise = Promise.promise();
+        final NextcloudConfig nextcloudConfig = this.nextcloudConfigMapByHost.get(host);
+        final JsonObject body = new JsonObject()
+                .put("path", path.startsWith("/") ? path : "/" + path)
+                .put("shareType", 0) // 0 = partage vers un utilisateur (par opposition à un groupe/lien public)
+                .put("shareWith", targetUserId)
+                .put("permissions", permissions);
+        this.client.postAbs(nextcloudConfig.host() + "/ocs/v2.php/apps/files_sharing/api/v1/shares?format=json")
+                .basicAuthentication(userSession.userId(), userSession.token())
+                .putHeader("OCS-APIRequest", "true")
+                .as(BodyCodec.jsonObject())
+                .sendJsonObject(body, responseAsync -> {
+                    if (responseAsync.failed()) {
+                        log.error("[Nextcloud@DefaultDocumentsService::shareWithUser] Failed to create share: ", responseAsync.cause());
+                        promise.fail(responseAsync.cause().getMessage());
+                        return;
+                    }
+                    final JsonObject ocs = responseAsync.result().body().getJsonObject("ocs", new JsonObject());
+                    final int statusCode = ocs.getJsonObject("meta", new JsonObject()).getInteger("statuscode", 0);
+                    if (statusCode != 200) {
+                        String message = ocs.getJsonObject("meta", new JsonObject()).getString("message", "unknown error");
+                        log.error("[Nextcloud@DefaultDocumentsService::shareWithUser] NextCloud refused the share : " + message);
+                        promise.fail(message);
+                    } else {
+                        promise.complete(ocs.getJsonObject(Field.DATA, new JsonObject()));
+                    }
+                });
+        return promise.future();
+    }
+
+    @Override
+    public Future<HttpResponse<Buffer>> getPreview(String host, UserNextcloud.TokenProvider userSession, Number fileId, int width, int height) {
+        Promise<HttpResponse<Buffer>> promise = Promise.promise();
+        final NextcloudConfig nextcloudConfig = this.nextcloudConfigMapByHost.get(host);
+        this.client.getAbs(nextcloudConfig.host() + "/index.php/core/preview")
+                .addQueryParam("fileId", String.valueOf(fileId))
+                .addQueryParam("x", String.valueOf(width))
+                .addQueryParam("y", String.valueOf(height))
                 .basicAuthentication(userSession.userId(), userSession.token())
                 .send(responseAsync -> proceedGetDocument(responseAsync, promise));
         return promise.future();
@@ -576,7 +743,7 @@ public class DefaultDocumentsService implements DocumentsService {
     }
 
     @Override
-    public Future<JsonArray> uploadStreamedMultipleFiles(String headerCount, HttpServerRequest request, UserNextcloud.TokenProvider user, Vertx vertx) {
+    public Future<JsonArray> uploadStreamedMultipleFiles(String headerCount, HttpServerRequest request, UserNextcloud.TokenProvider user, Vertx vertx, List<String> userStructures) {
         final String host = Renders.getHost(request);
         String path = request.getParam(Field.PATH);
         request.response().setChunked(true);
@@ -619,7 +786,7 @@ public class DefaultDocumentsService implements DocumentsService {
                 });
 
                 upload.endHandler(v -> {
-                    uploadStreamedFile(host, user, attachment, path, tmpFile, vertx)
+                    uploadStreamedFile(host, user, attachment, path, tmpFile, vertx, userStructures)
                             .onSuccess(res -> {
                                 try { Files.deleteIfExists(tmpFile); } catch (IOException ignored) {}
                                 if (incrementFile.incrementAndGet() == Integer.parseInt(totalFilesToUpload) && !responseSent.get()) {
@@ -643,9 +810,24 @@ public class DefaultDocumentsService implements DocumentsService {
         return promise.future();
     }
 
-    private Future<JsonObject> uploadStreamedFile(String host, UserNextcloud.TokenProvider user, Attachment file, String path, Path tmpFile, Vertx vertx) {
+    private Future<JsonObject> uploadStreamedFile(String host, UserNextcloud.TokenProvider user, Attachment file, String path, Path tmpFile, Vertx vertx, List<String> userStructures) {
         Promise<JsonObject> promise = Promise.promise();
         String finalPath = (path != null ? path + "/" : "") + file.metadata().filename();
+
+        checkExtensionAllowed(file.metadata().filename(), userStructures)
+                .onSuccess(allowed -> uploadStreamedFileAllowed(host, user, file, finalPath, tmpFile, vertx)
+                        .onSuccess(promise::complete)
+                        .onFailure(promise::fail))
+                .onFailure(err -> {
+                    try { Files.deleteIfExists(tmpFile); } catch (IOException ignored) {}
+                    promise.fail(err);
+                });
+
+        return promise.future();
+    }
+
+    private Future<JsonObject> uploadStreamedFileAllowed(String host, UserNextcloud.TokenProvider user, Attachment file, String finalPath, Path tmpFile, Vertx vertx) {
+        Promise<JsonObject> promise = Promise.promise();
 
         this.getUniqueFileName(host, user, finalPath, 0)
                 .onSuccess(filePath -> {
@@ -1230,7 +1412,7 @@ public class DefaultDocumentsService implements DocumentsService {
                     if (document.containsKey(Field.ETYPE) && document.getString(Field.ETYPE).equals(Field.FOLDER)) {
                         return processFolderCopy(host, userSession, user, document, parentPath);
                     } else {
-                        return sendWorkspaceFileToNC(host, userSession, id, parentPath);
+                        return sendWorkspaceFileToNC(host, userSession, user, id, parentPath);
                     }
                 })
                 .onSuccess(promise::complete)
@@ -1359,32 +1541,16 @@ public class DefaultDocumentsService implements DocumentsService {
      * @param parentName    Name of the parent folder in Nextcloud
      * @return              Future Json with result of the upload
      */
-    private Future<JsonObject> sendWorkspaceFileToNC(String host, UserNextcloud.TokenProvider userSession, String id, String parentName) {
+    private Future<JsonObject> sendWorkspaceFileToNC(String host, UserNextcloud.TokenProvider userSession, UserInfos user, String id, String parentName) {
         Promise<JsonObject> promise = Promise.promise();
         String finalPath = (parentName != null ? parentName + "/" : "" );
 
         workspaceHelper.readDocument(id, file -> {
             if (file != null) {
                 String docName = file.getDocument().getString(Field.NAME);
-                getUniqueFileName(host, userSession, StringHelper.encodeUrlForNc(finalPath + docName), 0)
-                        .onSuccess(name -> {
-                            final NextcloudConfig nextcloudConfig = this.nextcloudConfigMapByHost.get(host);
-                            this.client.putAbs(nextcloudConfig.host() + nextcloudConfig.webdavEndpoint() + "/" + userSession.userId() + "/" +
-                                            name)
-                                    .basicAuthentication(userSession.userId(), userSession.token())
-                                    .sendBuffer(file.getData(), responseAsync -> {
-                                        if (responseAsync.failed()) {
-                                            String messageToFormat = "[Nextcloud@%s::sendWorkspaceFileToNC] An error has occurred during uploading file : %s";
-                                            PromiseHelper.reject(log, messageToFormat, this.getClass().getSimpleName(), responseAsync.cause(), promise);
-                                        } else {
-                                            promise.complete(file.getDocument());
-                                        }
-                                    });
-                        })
-                        .onFailure(err -> {
-                            String messageToFormat = "[Nextcloud@%s::sendWorkspaceFileToNC] Error while generating duplicate name : %s";
-                            PromiseHelper.reject(log, messageToFormat, this.getClass().getSimpleName(), err, promise);
-                        });
+                checkExtensionAllowed(docName, user.getStructures())
+                        .onSuccess(allowed -> sendWorkspaceFileToNCAllowed(host, userSession, file, finalPath + docName, promise))
+                        .onFailure(promise::fail);
             } else {
                 String messageToFormat = "[Nextcloud@%s::sendWorkspaceFileToNC] An error has occurred during uploading file : %s";
                 PromiseHelper.reject(log, messageToFormat, this.getClass().getSimpleName(), new Exception("file.not.found"), promise);
@@ -1392,6 +1558,28 @@ public class DefaultDocumentsService implements DocumentsService {
         });
 
         return promise.future();
+    }
+
+    private void sendWorkspaceFileToNCAllowed(String host, UserNextcloud.TokenProvider userSession, WorkspaceHelper.Document file, String path, Promise<JsonObject> promise) {
+        getUniqueFileName(host, userSession, StringHelper.encodeUrlForNc(path), 0)
+                .onSuccess(name -> {
+                    final NextcloudConfig nextcloudConfig = this.nextcloudConfigMapByHost.get(host);
+                    this.client.putAbs(nextcloudConfig.host() + nextcloudConfig.webdavEndpoint() + "/" + userSession.userId() + "/" +
+                                    name)
+                            .basicAuthentication(userSession.userId(), userSession.token())
+                            .sendBuffer(file.getData(), responseAsync -> {
+                                if (responseAsync.failed()) {
+                                    String messageToFormat = "[Nextcloud@%s::sendWorkspaceFileToNC] An error has occurred during uploading file : %s";
+                                    PromiseHelper.reject(log, messageToFormat, this.getClass().getSimpleName(), responseAsync.cause(), promise);
+                                } else {
+                                    promise.complete(file.getDocument());
+                                }
+                            });
+                })
+                .onFailure(err -> {
+                    String messageToFormat = "[Nextcloud@%s::sendWorkspaceFileToNC] Error while generating duplicate name : %s";
+                    PromiseHelper.reject(log, messageToFormat, this.getClass().getSimpleName(), err, promise);
+                });
     }
 
     /**
@@ -1405,5 +1593,39 @@ public class DefaultDocumentsService implements DocumentsService {
         return createFolder(host, userSession, StringHelper.encodeUrlForNc(path.replace(Field.ASCIISPACE, " ")));
     }
 
+    @Override
+    public Future<JsonObject> createDocumentFromTemplate(String host, UserNextcloud.TokenProvider userSession, String type, String name, String path) {
+        Promise<JsonObject> promise = Promise.promise();
+        String templatePath = fr.wseduc.webutils.data.FileResolver.absolutePath("public/nextcloud-templates/template." + type);
+        String filename = name + "." + type;
+        String contentType;
+        try {
+            contentType = Files.probeContentType(java.nio.file.Paths.get(templatePath));
+        } catch (IOException e) {
+            log.error("[Nextcloud@createDocumentFromTemplate] Failed to read content type for type " + type, e);
+            promise.fail(e);
+            return promise.future();
+        }
+        this.vertx.fileSystem().readFile(templatePath, readEvent -> {
+            if (readEvent.failed()) {
+                log.error("[Nextcloud@createDocumentFromTemplate] Failed to read template file " + templatePath, readEvent.cause());
+                promise.fail(readEvent.cause());
+                return;
+            }
+            storage.writeBuffer(readEvent.result(), contentType, filename, storageResult -> {
+                if (!"ok".equals(storageResult.getString(Field.STATUS))) {
+                    promise.fail(storageResult.getString(Field.MESSAGE, "storage.write.failed"));
+                    return;
+                }
+                Attachment attachment = new Attachment(storageResult.getString(Field._ID), new Metadata(storageResult.getJsonObject("metadata")));
+                this.uploadFile(host, userSession, attachment, path, true)
+                        .onSuccess(uploadResult -> promise.complete(new JsonObject()
+                                .put(Field.NAME, filename)
+                                .put(Field.PATH, (path != null && !path.isEmpty() ? path + "/" : "") + filename)))
+                        .onFailure(promise::fail);
+            });
+        });
+        return promise.future();
+    }
 
 }

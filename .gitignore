@@ -37,6 +37,10 @@ angularjs/src/dist/*
 angularjs/src/js/*
 angularjs/src/view/*
 backend/src/main/resources/public/*
+# Modèles de documents vierges (docx/xlsx/pptx) pour "Créer un document" — sources versionnées,
+# pas un artefact de build front (cf. même convention que connectors/lool/.../lool-templates).
+!backend/src/main/resources/public/nextcloud-templates/
+!backend/src/main/resources/public/nextcloud-templates/*
 backend/src/main/resources/view
 
 .env

@@ -8,7 +8,9 @@ import {
   inputsContentStyle,
   inputStyle,
   inputTitleStyle,
+  instructionsStyle,
 } from "./style";
+import { OverrideBadge } from "~/components/OverrideBadge";
 import { useGlobalProvider } from "~/providers/GlobalProvider";
 import { flexStartBoxStyle } from "~/styles/boxStyles";
 
@@ -18,12 +20,27 @@ export const BwLimits: FC = () => {
     inputValues: { uploadLimit, downloadLimit },
     handleUploadLimitChange,
     handleDownloadLimitChange,
+    selectedStructureId,
+    structureOverrides,
   } = useGlobalProvider();
 
   return (
     <Box>
       <Typography variant="h2" sx={flexStartBoxStyle}>
         {t("nextcloud.console.bandwidth")}
+      </Typography>
+      {selectedStructureId && (
+        <OverrideBadge
+          isOverridden={
+            !!(
+              structureOverrides?.uploadLimit ||
+              structureOverrides?.downloadLimit
+            )
+          }
+        />
+      )}
+      <Typography variant="body2" sx={instructionsStyle}>
+        {t("nextcloud.console.bandwidth.instructions")}
       </Typography>
       <Box sx={inputsContentStyle}>
         <Box sx={customColumnBoxStyle}>
