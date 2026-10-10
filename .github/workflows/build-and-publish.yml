@@ -31,7 +31,7 @@ jobs:
 
       - uses: actions/setup-java@v6
         with:
-          java-version: "8"
+          java-version: '21'
           distribution: temurin
           cache: maven
 
@@ -127,6 +127,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
+
+      # Les versions -patched sont republiées à identique : le cache de setup-java
+      # resservait un entcore périmé, et le fat JAR embarquait du code déjà corrigé
+      # en amont. On repart donc du dépôt distant pour tout org.entcore.
+      - name: Purger entcore du cache Maven (versions -patched republiées)
+        run: rm -rf ~/.m2/repository/org/entcore
 
       - name: Build fat JAR
         working-directory: backend
