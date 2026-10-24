@@ -18,7 +18,7 @@ jobs:
       options: --user root -v ${{ github.workspace }}:/home/node/:rw
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@50fbc622fc4ef5163becd7fab6573eac35f8462e # v1
       - name: Run pnpm install
         working-directory: ./frontend
         run: pnpm install
@@ -49,7 +49,7 @@ jobs:
       options: --user root -v ${{ github.workspace }}:/home/maven/:rw
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@50fbc622fc4ef5163becd7fab6573eac35f8462e # v1
       # app-parent (fr.openent:app-parent) vit sur GitHub Packages (entcore-v2), pas sur
       # Maven Central -- sans ce profil, "mvn clean install" échoue en "Non-resolvable
       # parent POM" avant même de compiler quoi que ce soit. GITHUB_TOKEN (même avec
