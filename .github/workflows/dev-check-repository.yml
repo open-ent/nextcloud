@@ -45,7 +45,7 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: maven:3.8.6-jdk-8
+      image: maven:3.9-eclipse-temurin-21
       options: --user root -v ${{ github.workspace }}:/home/maven/:rw
 
     steps:
