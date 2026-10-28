@@ -82,7 +82,7 @@ public class NextcloudShareStructureController extends ControllerHelper {
             ids.add(rule.getString(Field.TARGETSTRUCTUREID));
         }
 
-        String cypher = "MATCH (s:Structure) WHERE s.id IN {ids} RETURN s.id as id, s.name as name, s.UAI as UAI";
+        String cypher = "MATCH (s:Structure) WHERE s.id IN $ids RETURN s.id as id, s.name as name, s.UAI as UAI";
         JsonObject params = new JsonObject().put("ids", new JsonArray(new ArrayList<>(ids)));
         serviceFactory.neo4j().execute(cypher, params, Neo4jResult.validResultHandler(event -> {
             JsonObject namesById = new JsonObject();
@@ -119,7 +119,7 @@ public class NextcloudShareStructureController extends ControllerHelper {
                 return;
             }
 
-            String cypher = "MATCH (s:Structure) WHERE s.id IN {ids} RETURN s.id as id, s.name as name, s.UAI as UAI";
+            String cypher = "MATCH (s:Structure) WHERE s.id IN $ids RETURN s.id as id, s.name as name, s.UAI as UAI";
             JsonObject params = new JsonObject().put("ids", new JsonArray(new ArrayList<>(myStructures)));
             serviceFactory.neo4j().execute(cypher, params, Neo4jResult.validResultHandler(event -> {
                 if (event.isLeft()) {
@@ -144,7 +144,7 @@ public class NextcloudShareStructureController extends ControllerHelper {
 
         String cypher =
                 "MATCH (s:Structure) " +
-                        "WHERE toLower(s.name) CONTAINS toLower({search}) OR toLower(s.UAI) CONTAINS toLower({search}) " +
+                        "WHERE toLower(s.name) CONTAINS toLower($search) OR toLower(s.UAI) CONTAINS toLower($search) " +
                         "RETURN s.id as id, s.name as name, s.UAI as UAI " +
                         "ORDER BY s.name " +
                         "LIMIT 20";
@@ -169,7 +169,7 @@ public class NextcloudShareStructureController extends ControllerHelper {
             return;
         }
 
-        String cypher = "MATCH (s:Structure {UAI: {uai}}) RETURN s.id as id, s.name as name, s.UAI as UAI LIMIT 1";
+        String cypher = "MATCH (s:Structure {UAI: $uai}) RETURN s.id as id, s.name as name, s.UAI as UAI LIMIT 1";
         JsonObject params = new JsonObject().put("uai", uai.trim().toUpperCase());
         serviceFactory.neo4j().execute(cypher, params, Neo4jResult.validResultHandler(event -> {
             if (event.isLeft()) {
@@ -209,7 +209,7 @@ public class NextcloudShareStructureController extends ControllerHelper {
             }
 
             if (StringUtils.isEmpty(targetStructureId)) {
-                String cypher = "MATCH (s:Structure {UAI: {uai}}) RETURN s.id as id LIMIT 1";
+                String cypher = "MATCH (s:Structure {UAI: $uai}) RETURN s.id as id LIMIT 1";
                 JsonObject params = new JsonObject().put("uai", targetUai.trim().toUpperCase());
                 serviceFactory.neo4j().execute(cypher, params, Neo4jResult.validResultHandler(event -> {
                     if (event.isLeft() || event.right().getValue().isEmpty()) {
@@ -363,10 +363,10 @@ public class NextcloudShareStructureController extends ControllerHelper {
 
                 String cypher =
                         "MATCH (u:User)-[:IN]->(pg:ProfileGroup)-[:DEPENDS]->(s:Structure) " +
-                                "WHERE s.id IN {structureIds} " +
-                                "AND u.id <> {userId} " +
-                                "AND (NOT(HAS(u.blocked)) OR u.blocked = false) " +
-                                "AND u.displayNameSearchField CONTAINS {search} " +
+                                "WHERE s.id IN $structureIds " +
+                                "AND u.id <> $userId " +
+                                "AND (u.blocked IS NULL OR u.blocked = false) " +
+                                "AND u.displayNameSearchField CONTAINS $search " +
                                 "RETURN DISTINCT u.id as id, u.displayName as displayName, HEAD(u.profiles) as profile " +
                                 "ORDER BY u.displayName " +
                                 "LIMIT 15";

@@ -213,7 +213,7 @@ public class DefaultDocumentsService implements DocumentsService {
             return;
         }
 
-        String cypher = "MATCH (s:Structure {id: {structureId}}) RETURN s.UAI as UAI, s.name as name LIMIT 1";
+        String cypher = "MATCH (s:Structure {id: $structureId}) RETURN s.UAI as UAI, s.name as name LIMIT 1";
         JsonObject params = new JsonObject().put("structureId", structureId);
         neo4j.execute(cypher, params, org.entcore.common.neo4j.Neo4jResult.validResultHandler(event -> {
             JsonArray results = event.isRight() ? event.right().getValue() : new JsonArray();

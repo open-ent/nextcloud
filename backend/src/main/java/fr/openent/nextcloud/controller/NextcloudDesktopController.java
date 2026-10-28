@@ -124,7 +124,7 @@ public class NextcloudDesktopController extends ControllerHelper {
                 return;
             }
 
-            String cypher = "MATCH (s:Structure) WHERE s.id IN {ids} RETURN s.id as id, s.name as name, s.UAI as UAI ORDER BY s.name";
+            String cypher = "MATCH (s:Structure) WHERE s.id IN $ids RETURN s.id as id, s.name as name, s.UAI as UAI ORDER BY s.name";
             JsonObject params = new JsonObject().put("ids", new JsonArray(new java.util.ArrayList<>(myStructures)));
             serviceFactory.neo4j().execute(cypher, params, org.entcore.common.neo4j.Neo4jResult.validResultHandler(event -> {
                 if (event.isLeft()) {
@@ -148,7 +148,7 @@ public class NextcloudDesktopController extends ControllerHelper {
                 return;
             }
 
-            String cypher = "MATCH (s:Structure {id: {structureId}}) RETURN s.UAI as UAI, s.name as name LIMIT 1";
+            String cypher = "MATCH (s:Structure {id: $structureId}) RETURN s.UAI as UAI, s.name as name LIMIT 1";
             JsonObject params = new JsonObject().put("structureId", structureId);
             serviceFactory.neo4j().execute(cypher, params, org.entcore.common.neo4j.Neo4jResult.validResultHandler(neo4jEvent -> {
                 if (neo4jEvent.isLeft()) {
