@@ -475,7 +475,7 @@ public class DefaultDocumentsService implements DocumentsService {
     private Future<Void> deleteDocument(String host, UserNextcloud.TokenProvider userSession, String path) {
         Promise<Void> promise = Promise.promise();
         final NextcloudConfig nextcloudConfig = this.nextcloudConfigMapByHost.get(host);
-        this.client.deleteAbs(nextcloudConfig.host() + nextcloudConfig.webdavEndpoint() + "/" + userSession.userId() + "/" + path)
+        this.client.deleteAbs(nextcloudConfig.host() + nextcloudConfig.webdavEndpoint() + "/" + userSession.userId() + "/" + StringHelper.encodeUrlForNc(path))
                 .basicAuthentication(userSession.userId(), userSession.token())
                 .send(responseAsync -> onDeleteDocumentHandler(responseAsync, promise));
         return promise.future();
@@ -504,7 +504,7 @@ public class DefaultDocumentsService implements DocumentsService {
         Promise<Void> promise = Promise.promise();
         final NextcloudConfig nextcloudConfig = this.nextcloudConfigMapByHost.get(host);
         String url = nextcloudConfig.host() + nextcloudConfig.webdavEndpoint().replace(Field.FILES, "") + Field.TRASHBIN
-                + "/" + userSession.userId() + "/" + path;
+                + "/" + userSession.userId() + "/" + StringHelper.encodeUrlForNc(path);
         this.client.deleteAbs(url)
                 .basicAuthentication(userSession.userId(), userSession.token())
                 .send(responseAsync -> onDeleteDocumentHandler(responseAsync, promise));
@@ -548,8 +548,9 @@ public class DefaultDocumentsService implements DocumentsService {
 
         for (String trashPath : paths) {
             String filename = trashPath.substring(trashPath.lastIndexOf("/") + 1);
-            String sourceUrl = baseUrl + "remote.php/dav/trashbin/" + userId + trashPath;
-            String destinationUrl = baseUrl + "remote.php/dav/trashbin/" + userId + "/restore/" + filename;
+            // les noms comportant des espaces ou des accents doivent être encodés, sinon la requête WebDAV est rejetée
+            String sourceUrl = baseUrl + "/remote.php/dav/trashbin/" + userId + "/" + StringHelper.encodeUrlForNc(trashPath);
+            String destinationUrl = baseUrl + "/remote.php/dav/trashbin/" + userId + "/restore/" + StringHelper.encodeUrlForNc(filename);
 
             Promise<Void> operationPromise = Promise.promise();
 
@@ -615,7 +616,7 @@ public class DefaultDocumentsService implements DocumentsService {
             return promise.future();
         }
 
-        String url = nextcloudConfig.host() + "remote.php/dav/" + Field.TRASHBIN + "/" +
+        String url = nextcloudConfig.host() + "/remote.php/dav/" + Field.TRASHBIN + "/" +
                 userSession.userId() + "/" + Field.TRASH;
 
         this.client
