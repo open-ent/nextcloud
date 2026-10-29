@@ -83,5 +83,6 @@
   "nextcloud.create.document.filename": "Nom du document",
   "nextcloud.create.document.validation": "Valider",
   "nextcloud.create.document.success": "Le document a été créé.",
-  "nextcloud.create.document.error": "Une erreur est survenue lors de la création du document."
+  "nextcloud.create.document.error": "Une erreur est survenue lors de la création du document.",
+  "nextcloud.open.server": "Ouvrir NextCloud"
 }

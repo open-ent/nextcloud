@@ -5,6 +5,14 @@
             <i18n>nextcloud.url.connect</i18n> &#58; <a target="_blank" ng-href="[[vm.nextcloudUrl]]">[[vm.nextcloudUrl]]</a>
         </div>
 
+        <!-- ouvrir NextCloud déjà connecté (connexion unique : l'ENT reconnaît l'usager), tout à droite, aligné sur les autres boutons -->
+        <div class="cell right-magnet" ng-if="vm.nextcloudUrl">
+            <button type="button" class="document-buttons-import" data-nc-open-server data-url="[[vm.nextcloudUrl]]"
+                    onclick="window.open(this.getAttribute('data-url'), '_blank', 'noopener')">
+                <span><i18n>nextcloud.open.server</i18n></span>
+            </button>
+        </div>
+
         <!-- action : importer des fichiers dans NextCloud (bouton persistant, en plus de la
              dropzone), aligné à droite. Affiché seulement si droit d'écriture sur le dossier.
              On ouvre le sélecteur de fichiers NATIF (input caché) puis on délègue à
