@@ -40,7 +40,8 @@ cd backend
 rm -rf ./.gradle
 rm -rf ./build
 rm -rf ./gradle
-rm -rf ./src/main/resources/public
+# public/ est vidé SAUF les modèles de documents vierges, versionnés dans les sources (sinon « Créer un document » échoue en 500)
+find ./src/main/resources/public -mindepth 1 -maxdepth 1 ! -name nextcloud-templates -exec rm -rf {} + 2>/dev/null || true
 rm -rf ./src/main/resources/view
 echo 'Repo clean for build !'
 cd ..

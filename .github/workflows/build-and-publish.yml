@@ -73,7 +73,10 @@ jobs:
         run: |
           set -eu
           RES=backend/src/main/resources
-          rm -rf "$RES/public" "$RES/view"
+          # On vide public/ SAUF les modèles de documents vierges (docx/xlsx/pptx), versionnés dans les sources :
+          # sans eux, « Créer un document » échoue en 500 (NoSuchFileException sur template.docx).
+          rm -rf "$RES/view"
+          find "$RES/public" -mindepth 1 -maxdepth 1 ! -name nextcloud-templates -exec rm -rf {} + 2>/dev/null || true
           # React : tout le dist à la racine des resources
           cp -R frontend/dist/* "$RES/"
           mkdir -p "$RES/view" "$RES/public/template" "$RES/public/img" "$RES/public/js"
@@ -140,6 +143,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
         run: mvn clean package -DskipTests -B -DbuildNumber=${GITHUB_SHA::8} -DscmBranch=${GITHUB_REF_NAME}
+
+      # Garde-fou : le jar publié doit contenir les trois modèles de documents (déjà perdus une fois par le nettoyage de public/).
+      - name: Vérifier les modèles de documents dans le fat JAR
+        working-directory: backend
+        run: |
+          for t in template.docx template.xlsx template.pptx; do
+            unzip -l target/*-fat.jar | grep -q "public/nextcloud-templates/$t" || { echo "::error::$t absent du fat JAR"; exit 1; }
+          done
 
       - name: Run tests
         if: github.event_name == 'pull_request'
