@@ -14,6 +14,7 @@ on:
       - "*-patched"
       - "*-patched-dev"
     tags: ["*"]
+    paths-ignore: ['**.md', 'docs/**']
   pull_request:
     branches: [main, master, dev]
   workflow_dispatch:
@@ -21,6 +22,14 @@ on:
 permissions:
   contents: write
   packages: write
+
+# Un seul build par commit : le run du tag (publication) annule le build de branche du même
+# commit encore en cours, qu'il refait de toute façon. Un run de branche n'annule jamais une
+# publication, il attend son tour. Deux runs sur le même tag (push et relance manuelle) : le
+# plus récent remplace l'autre et republie le même commit.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/tags/') }}
 
 jobs:
   build-publish:
