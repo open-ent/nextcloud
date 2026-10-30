@@ -16,7 +16,7 @@ on:
     tags: ["*"]
     paths-ignore: ['**.md', 'docs/**']
   pull_request:
-    branches: [main, master, dev]
+    branches: [main, master, dev, '*-patched-dev', '*-patched']
   workflow_dispatch:
 
 permissions:
