@@ -58,7 +58,7 @@
     "@splidejs/react-splide": "^0.7.8",
     "dayjs": "1.11.10",
     "i18next": "23.5.1",
-    "i18next-http-backend": "2.2.2",
+    "i18next-http-backend": "4.0.4",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-error-boundary": "4.0.11",
