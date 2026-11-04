@@ -1,35 +1,40 @@
 var gulp = require('gulp');
 var webpack = require('webpack-stream');
-var merge = require('merge2');
 const replace = require('gulp-replace');
 var clean = require('gulp-clean');
 var argv = require('yargs').argv;
 var fs = require('fs');
+var path = require('path');
 
 gulp.task('drop-cache', function(){
-     return gulp.src(['./src/dist'], { read: false })
+     return gulp.src(['./src/dist'], { read: false, allowEmpty: true })
 		.pipe(clean());
 });
 
-gulp.task('webpack', ['drop-cache'], () => {
-    return gulp.src('./src/**/*.ts')
-        .pipe(webpack(require('./webpack.config.js')))
-        .on('error', function handleError() {
-            this.emit('end'); // Recover from errors
-        })
-        .pipe(gulp.dest('./src/dist'));
-});
+gulp.task('webpack', gulp.series('drop-cache', (done) => {
+    // Appel direct du webpack embarqué par webpack-stream (celui qui a toujours produit les
+    // bundles) : ses flux « through » ne se raccordent pas à ceux de gulp 5. Les erreurs de
+    // typage restent signalées sans interrompre le build, comme sous gulp 3.
+    var config = require('./webpack.config.js');
+    config.output.path = path.resolve(__dirname, './src/dist');
+    webpack.webpack(config, (err, stats) => {
+        if (stats) console.log(stats.toString({ colors: false, chunks: false }));
+        done(err);
+    });
+}));
 
-gulp.task('build', ['webpack'], () => {
-    var refs = gulp.src("./src/view-src/**/*.html")
+function views() {
+    return gulp.src("./src/view-src/**/*.html")
         .pipe(replace('@@VERSION', Date.now()))
         .pipe(gulp.dest("./src/view"));
+}
 
-    var copyBehaviours = gulp.src('./src/dist/behaviours.js')
+function copyBehaviours() {
+    return gulp.src('./src/dist/behaviours.js')
         .pipe(gulp.dest('./src/js'));
+}
 
-    return merge[refs, copyBehaviours];
-});
+gulp.task('build', gulp.series('webpack', gulp.parallel(views, copyBehaviours)));
 
 function getModName(fileContent){
     var getProp = function(prop){
@@ -47,19 +52,19 @@ gulp.task('watch', () => {
         springboard += '/';
     }
 
-    gulp.watch('./angularJS/src/ts/**/*.ts', () => gulp.start('build'));
+    gulp.watch('./angularJS/src/ts/**/*.ts', gulp.series('build'));
 
     fs.readFile("./gradle.properties", "utf8", function(error, content){
         var modName = getModName(content);
         gulp.watch(['./angularJS/src/template/**/*.html', '!./angularJS/src/template/entcore/*.html'], () => {
             console.log('Copying resources to ' + springboard + 'mods/' + modName);
-            gulp.src('./angularJS/src/**/*')
+            return gulp.src('./angularJS/src/**/*', { encoding: false })
                 .pipe(gulp.dest(springboard + 'mods/' + modName));
         });
 
         gulp.watch('./angularJS/src/view/**/*.html', () => {
             console.log('Copying resources to ' + springboard + 'mods/' + modName);
-            gulp.src('./angularJS/src/**/*')
+            return gulp.src('./angularJS/src/**/*', { encoding: false })
                 .pipe(gulp.dest(springboard + 'mods/' + modName));
         });
     });

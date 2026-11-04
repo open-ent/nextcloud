@@ -1,7 +1,7 @@
 version: "3"
 services:
   maven:
-    image: maven:3.9-eclipse-temurin-21
+    image: maven:3.9-eclipse-temurin-25
     user: "$DEFAULT_DOCKER_USER"
     working_dir: /usr/src/maven
     volumes:
@@ -12,7 +12,7 @@ services:
 
 
   node:
-    image: opendigitaleducation/node:10-alpine
+    image: node:26-alpine
     working_dir: /home/node/app
     volumes:
       - ./:/home/node/app

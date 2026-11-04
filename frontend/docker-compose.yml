@@ -1,7 +1,7 @@
 version: "3"
 services:
   node:
-    image: "opendigitaleducation/node:20-alpine-pnpm"
+    image: node:26-alpine
     user: "node"
     container_name: node_app
     working_dir: /home/node/app

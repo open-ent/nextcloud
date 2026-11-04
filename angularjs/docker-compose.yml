@@ -1,7 +1,7 @@
 version: "3"
 services:
   node:
-    image: opendigitaleducation/node:22-alpine-pnpm
+    image: node:26-alpine
     working_dir: /home/node/app
     volumes:
       - ./:/home/node/app
